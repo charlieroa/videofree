@@ -86,6 +86,18 @@ En **🎙 Voz → Tu voz clonada**, graba 15 segundos hablando normal o sube un 
 la casilla de permiso. Chatterbox habla con tu voz y tu acento, y lo hace en tu GPU de Kaggle.
 **Clona solo tu voz o la de alguien que te haya dado permiso.**
 
+### 7. Tu canal: foto de perfil y banner
+
+Arriba, en **📺 Mi canal**, sube una foto cualquiera y sale con las medidas de YouTube:
+
+| | Medida | Cómo se ajusta |
+|---|---|---|
+| Foto de perfil | **800 × 800** (se ve en círculo de 98 px), máx. 4 MB | Recorte al centro. En fotos verticales, cerca de la cara |
+| Banner | **2560 × 1440**, máx. 6 MB. Zona segura **1546 × 423** | Si la foto es ancha, la llena. Si no, la pone entera en la zona segura sobre un fondo desenfocado |
+
+La vista previa marca qué parte se ve en el ordenador y cuál en el móvil. Descárgalas y súbelas en
+**YouTube Studio → Personalización → Branding**.
+
 ---
 
 ## Mac o Linux
@@ -158,7 +170,7 @@ están en [docs/TECNICO.md](docs/TECNICO.md).
 iniciar.bat / iniciar.sh   instalar y arrancar
 app.py                     servidor (FastAPI)
 web/index.html             la pantalla
-motor/                     guion, voz, imágenes, clips, montaje y la conexión con Kaggle
+motor/                     guion, voz, imágenes, clips, montaje, canal y la conexión con Kaggle
 config.json                ajustes globales (sin claves)
 skill/videofree/SKILL.md   el skill para Claude Code
 ```

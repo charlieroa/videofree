@@ -160,6 +160,20 @@
   .tarjeta .publicar input { font-size: 12px; padding: 5px 7px; }
   .tarjeta.nueva { align-items: center; justify-content: center; border-style: dashed; min-height: 220px; cursor: pointer; color: var(--suave); font-size: 15px; gap: 6px; }
   .tarjeta.nueva:hover { border-color: var(--acento); color: var(--acento); }
+  /* mi canal: perfil y banner */
+  .canal { display: grid; gap: 18px; }
+  .canal .panel { margin: 0; }
+  .canal-fila { display: flex; gap: 22px; flex-wrap: wrap; align-items: center; margin: 12px 0; }
+  .perfil-grande { width: 160px; height: 160px; border-radius: 50%; object-fit: cover; border: 1px solid var(--borde); background: #0003; }
+  .perfil-chico { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1px solid var(--borde); }
+  .banner-caja { position: relative; width: 100%; aspect-ratio: 16/9; background: #0003; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; }
+  .banner-caja img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .banner-caja .zona { position: absolute; left: 0; right: 0; top: 35.31%; height: 29.38%; border: 2px dashed #fff9; box-shadow: 0 0 0 9999px #0007; pointer-events: none; }
+  .banner-caja .zona.segura { left: 19.8%; right: 19.8%; border-color: var(--acento); box-shadow: none; }
+  .banner-caja .zona span { position: absolute; top: 4px; left: 6px; font-size: 11px; color: #fff; background: #000a; padding: 1px 6px; border-radius: 4px; }
+  .banner-caja .zona.segura span { left: auto; right: 6px; }
+  .canal a.boton { display: inline-block; font-size: 13px; padding: 7px 12px; border: 1px solid var(--borde); border-radius: 8px; color: var(--texto); text-decoration: none; margin-left: 6px; }
+  .medidas { font-size: 13px; color: var(--suave); line-height: 1.6; margin: 0; }
   .clon { margin-top: 8px; padding: 10px; border: 1px dashed var(--borde); border-radius: 8px; font-size: 13px; }
   .clon[hidden] { display: none; }
   .clon p { margin: 0 0 8px; color: var(--suave); }
@@ -173,7 +187,7 @@
   <h1><a href="#"><span class="logo">▶</span> Video Simple</a></h1><span class="gratis">0 $ por vídeo</span>
   <div class="derecha">
     <span class="quien solo-dentro" id="quien"></span>
-    <button id="abrirAsistente" class="solo-dentro">Asistente</button><button id="abrirAjustes" class="solo-dentro">Ajustes</button>
+    <button id="abrirCanal" class="solo-dentro" title="Foto de perfil y banner con las medidas de YouTube">📺 Mi canal</button><button id="abrirAsistente" class="solo-dentro">Asistente</button><button id="abrirAjustes" class="solo-dentro">Ajustes</button>
     <button id="salir" class="solo-dentro">Salir</button>
     <button id="entrar" class="primario solo-fuera">Entrar</button>
   </div>
@@ -403,6 +417,7 @@ $("#crear").onclick = async () => {
 
 window.onhashchange = () => abrir(location.hash.slice(1));
 async function abrir(pid) {
+  if (pid === "canal") { actual = null; clearTimeout(temporizador); clearTimeout(relojTablero); await pintarCanal(); if (sesion.usuario) cargarLista(); return; }
   actual = pid; activa = null;
   if (pid) { await refrescar(); }
   else if (sesion.usuario) { clearTimeout(temporizador); pintarTablero(); }
@@ -691,6 +706,54 @@ let paso = 0, diag = null, gpuTimer = null;
 const PASOS_ASIS = ["bienvenida", "equipo", "guion", "imagenes", "gpu", "voz", "listo"];
 let paisAsis = null;
 $("#abrirAsistente").onclick = () => abrirAsistente();
+$("#abrirCanal").onclick = () => { location.hash = "canal"; };
+
+// ------------------------------------------------------------- mi canal
+// Sube una foto cualquiera y sale con las medidas de YouTube: perfil 800x800 y banner
+// 2560x1440, con lo importante dentro de la zona que se ve en móvil.
+async function pintarCanal() {
+  let c;
+  try { c = await api("/api/canal"); } catch (e) { $("#vista").innerHTML = `<p class="estado">${esc(e.message)}</p>`; return; }
+  const v = t => c.hechas[t] ? `/canal/${t}?v=${c.hechas[t]}` : "";
+  $("#vista").innerHTML = `<div class="canal">
+    <div class="tablero-cab"><h2>📺 Mi canal de YouTube</h2><a href="#">← Mis vídeos</a></div>
+    <div class="panel">
+      <h2>Foto de perfil</h2>
+      <p class="medidas">YouTube: <b>800 × 800 px</b>, se ve como un círculo (98 px). JPG o PNG, máx. 4 MB. Sube cualquier foto: se recorta sola al centro (en retratos, cerca de la cara).</p>
+      <div class="canal-fila">
+        ${v("perfil") ? `<img class="perfil-grande" src="${v("perfil")}" alt=""><img class="perfil-chico" src="${v("perfil")}" alt="" title="Así se ve junto a tus vídeos">` : `<div class="perfil-grande"></div>`}
+        <div><input type="file" id="fPerfil" accept="image/*" hidden>
+          <button class="primario" data-subir="fPerfil">${v("perfil") ? "Cambiar foto" : "Subir foto"}</button>
+          ${v("perfil") ? `<a class="boton" href="${v("perfil")}" download="youtube-perfil.jpg">Descargar 800×800</a>` : ""}
+          <p class="estado" id="ePerfil"></p></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Banner</h2>
+      <p class="medidas">YouTube: <b>2560 × 1440 px</b> (mínimo 2048 × 1152), máx. 6 MB. La TV lo enseña entero; el ordenador, la franja del medio (2560 × 423); el móvil, solo el centro (<b>1546 × 423</b>, zona segura). Si tu foto no es ancha, va entera en la zona segura sobre un fondo desenfocado de ella misma.</p>
+      <div class="banner-caja">${v("banner") ? `<img src="${v("banner")}" alt="">` : ""}
+        <div class="zona"><span>Ordenador</span></div><div class="zona segura"><span>Móvil · zona segura</span></div></div>
+      <div class="canal-fila"><input type="file" id="fBanner" accept="image/*" hidden>
+        <button class="primario" data-subir="fBanner">${v("banner") ? "Cambiar foto" : "Subir foto"}</button>
+        ${v("banner") ? `<a class="boton" href="${v("banner")}" download="youtube-banner.jpg">Descargar 2560×1440</a>` : ""}
+        <p class="estado" id="eBanner"></p></div>
+    </div>
+    <p class="medidas">Para ponerlas: en <a href="https://studio.youtube.com" target="_blank" rel="noopener">YouTube Studio</a> → <b>Personalización</b> → <b>Branding</b> → Subir, y luego <b>Publicar</b>.</p>
+  </div>`;
+  document.querySelectorAll("[data-subir]").forEach(b => b.onclick = () => $("#" + b.dataset.subir).click());
+  for (const [campo, tipo, aviso] of [["#fPerfil", "perfil", "#ePerfil"], ["#fBanner", "banner", "#eBanner"]]) {
+    $(campo).onchange = async ev => {
+      const f = ev.target.files[0]; if (!f) return;
+      $(aviso).textContent = "Ajustando a la medida…";
+      const datos = await new Promise(ok => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(f); });
+      try {
+        const r = await api(`/api/canal/${tipo}`, { method: "POST", body: JSON.stringify({ imagen: datos }) });
+        await pintarCanal();
+        $(aviso).textContent = `✓ ${r.ancho}×${r.alto}, ${r.kb} KB, ${r.como}.${r.aviso ? " " + r.aviso : ""}`;
+      } catch (e) { $(aviso).textContent = "✗ " + e.message; }
+    };
+  }
+}
 
 function abrirAsistente(inicio = 0) { paso = inicio; $("#velo").hidden = false; pintarAsistente(); }
 function cerrarAsistente() {

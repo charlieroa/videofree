@@ -24,7 +24,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from motor import clips_gpu, gpu, guion, imagenes, montaje, proyecto, usuarios, voz, voz_gpu
+from motor import canal, clips_gpu, gpu, guion, imagenes, montaje, proyecto, usuarios, voz, voz_gpu
 
 app = FastAPI(title="Video Simple")
 WEB = proyecto.RAIZ / "web"
@@ -301,6 +301,49 @@ def archivo(pid: str, ruta: str):
     if base not in destino.parents or not destino.is_file():
         raise HTTPException(404, "No existe ese fichero.")
     return FileResponse(destino)
+
+
+# ------------------------------------------------------------ el canal
+
+class ImagenCanal(BaseModel):
+    imagen: str             # data URL (lo que da FileReader)
+
+
+@app.get("/api/canal")
+def ver_canal():
+    _yo()
+    return {"hechas": canal.estado(),
+            "medidas": {"perfil": canal.PERFIL, "banner": canal.BANNER,
+                        "escritorio": canal.ESCRITORIO, "segura": canal.SEGURA}}
+
+
+@app.post("/api/canal/{tipo}")
+def subir_canal(tipo: str, b: ImagenCanal):
+    """Una foto cualquiera -> foto de perfil o banner con las medidas de YouTube."""
+    _yo()
+    if tipo not in canal.ARCHIVO:
+        raise HTTPException(404, "Solo hay perfil y banner.")
+    import base64
+    try:
+        crudo = base64.b64decode(b.imagen.split(",", 1)[-1], validate=False)
+    except Exception:
+        raise HTTPException(400, "No he podido leer esa imagen.")
+    if len(crudo) > 25 * 1024 * 1024:
+        raise HTTPException(400, "La imagen pesa más de 25 MB.")
+    try:
+        return canal.guardar(tipo, crudo)
+    except ValueError as err:
+        raise HTTPException(400, str(err))
+
+
+@app.get("/canal/{tipo}")
+def archivo_canal(tipo: str):
+    _yo()
+    ruta = canal.carpeta() / canal.ARCHIVO.get(tipo, "-")
+    if not ruta.is_file():
+        raise HTTPException(404, "Todavía no está hecha.")
+    return FileResponse(ruta, headers={"Cache-Control": "no-store"},
+                        filename=f"youtube-{canal.ARCHIVO[tipo]}")
 
 
 def _voz_valida(v):
