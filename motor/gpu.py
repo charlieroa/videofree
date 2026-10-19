@@ -22,6 +22,8 @@ import os
 import re
 import shutil
 import subprocess
+import sys
+import sysconfig
 import threading
 import time
 from pathlib import Path
@@ -29,8 +31,11 @@ from pathlib import Path
 from . import proyecto, usuarios
 
 TRABAJOS = proyecto.RAIZ / "gpu_trabajos"
-KAGGLE = next((p for p in (proyecto.RAIZ / ".venv" / "Scripts" / "kaggle.exe",      # Windows
-                          proyecto.RAIZ / ".venv" / "bin" / "kaggle") if p.exists()),   # Mac/Linux
+# El kaggle del mismo Python que corre la app (venv en Windows o Mac/Linux).
+_BIN = Path(sysconfig.get_path("scripts"))
+KAGGLE = next((p for p in (_BIN / "kaggle.exe", _BIN / "kaggle",
+                           proyecto.RAIZ / ".venv" / "Scripts" / "kaggle.exe",
+                           proyecto.RAIZ / ".venv" / "bin" / "kaggle") if p.exists()),
               proyecto.RAIZ / ".venv" / "Scripts" / "kaggle.exe")
 
 # Si la GPU pedida lleva este rato en cola, se pide la otra: Kaggle reparte sus

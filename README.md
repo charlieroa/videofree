@@ -45,7 +45,7 @@ La primera vez tarda 1–2 minutos porque instala lo necesario. Después se abre
 ### 3. Crear tu usuario y seguir el asistente
 
 Al entrar, pulsa **Crear cuenta** (usuario y contraseña de mínimo 8 caracteres; se guarda
-solo en tu PC). Después se abre el **asistente** de 7 pasos:
+solo en tu PC). Después se abre el **asistente** de 7 pasos (cada usuario nuevo lo ve al entrar):
 
 1. **Bienvenida.**
 2. **Equipo**: comprueba solo que todo esté instalado.

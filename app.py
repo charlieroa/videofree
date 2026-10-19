@@ -388,7 +388,7 @@ def ver_config():
     return {"voz": cfg["voz"]["voz"], "voces": VOCES,
             "motor_imagen": cfg["imagen"]["motor"], "motor_guion": cfg["guion"]["motor"],
             "token_pollinations": bool(yo and proyecto.secretos().get("pollinations_token")),
-            "asistente_hecho": bool(cfg.get("asistente_hecho")),
+            "asistente_hecho": bool(yo and proyecto.secretos().get("asistente_hecho")),
             "gpu_conectada": bool(yo and gpu.credenciales())}
 
 
@@ -405,7 +405,7 @@ def guardar_config(a: Ajustes):
     if a.token_pollinations is not None:
         proyecto.guardar_secreto("pollinations_token", a.token_pollinations.strip())
     if a.asistente_hecho is not None:
-        cfg["asistente_hecho"] = a.asistente_hecho
+        proyecto.guardar_secreto("asistente_hecho", a.asistente_hecho)
     proyecto.CONFIG.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
     return ver_config()
 

@@ -729,15 +729,17 @@ async function pintarAsistente() {
       <label>Clave de Pollinations (opcional: sin marca de agua y sin espera) · <a href="https://enter.pollinations.ai" target="_blank">enter.pollinations.ai</a></label>
       <input id="asisToken" type="password" placeholder="${config.token_pollinations ? "clave guardada ✓" : "déjalo vacío si no tienes"}">`;
   } else if (nombre === "gpu") {
-    html += `<h2>GPU gratis (opcional)</h2>
-      <p>Para los planos con <b>vídeo IA de verdad</b>, Kaggle regala <b>30 horas a la semana</b> de una GPU de 16 GB. Es tuya, con tu cuenta. Si no la quieres ahora, pulsa Saltar.</p>
+    html += `<h2>Tu servidor gratis: la GPU de Kaggle</h2>
+      <p>Lo pesado del vídeo corre en <b>tu propia GPU de Kaggle</b>: 30 horas gratis a la semana, con tu cuenta. Con ella tienes la <b>voz natural</b> (y tu voz clonada), <b>imágenes con los mismos personajes</b> y el <b>movimiento IA</b> de las escenas. Sin ella el programa funciona, pero con voces edge, imágenes de Pollinations y cámara sin movimiento IA.</p>
       <ol>
-        <li>Crea una cuenta en <a href="https://www.kaggle.com/account/login" target="_blank">kaggle.com</a>.</li>
-        <li>Verifica tu teléfono en <a href="https://www.kaggle.com/settings" target="_blank">Settings</a> → <i>Phone verification</i>. Sin esto Kaggle no da GPU.</li>
-        <li>En <a href="https://www.kaggle.com/settings/api" target="_blank">Settings → API</a> pulsa <b>Generate New Token</b> y copia el token.</li>
-        <li>Pega aquí tu usuario y el token:</li>
+        <li>Crea una cuenta gratis en <a href="https://www.kaggle.com/account/login" target="_blank">kaggle.com</a> (con Google es un clic).</li>
+        <li>En <a href="https://www.kaggle.com/settings" target="_blank">Settings</a> → <i>Phone verification</i>, <b>verifica tu teléfono</b>. Sin esto Kaggle no da GPU.</li>
+        <li>En esa misma página verás tu <b>usuario</b> (arriba, junto a tu foto, o en la dirección kaggle.com/<i>usuario</i>).</li>
+        <li>Baja a la sección <b>API</b> y pulsa <b>Generate New Token</b>. Copia el token que aparece (empieza por <code>KGAT_</code>). Solo se muestra una vez: si lo pierdes, genera otro.</li>
+        <li>Pégalos aquí y pulsa <b>Conectar</b>. Después se prueba la GPU sola (2-5 min).</li>
       </ol>
-      <label>Usuario de Kaggle</label><input id="kUsuario" placeholder="tu_usuario">
+      <p class="ayuda">El token se guarda solo en este computador, en <code>secretos/</code>. Nunca se comparte ni se sube a internet.</p>
+      <label>Usuario de Kaggle</label><input id="kUsuario" placeholder="tu_usuario" autocomplete="off">
       <label>Token</label><input id="kToken" type="password" placeholder="${config.gpu_conectada ? "ya conectada ✓ (pega otro para cambiarla)" : "pega el token"}">
       <div class="fila" style="margin-top:10px"><button class="primario" id="kConectar">Conectar</button>
         <button id="kProbar" ${config.gpu_conectada ? "" : "disabled"}>Probar la GPU</button></div>
@@ -804,8 +806,9 @@ async function pintarAsistente() {
       try {
         await api("/api/gpu/conectar", { method: "POST", body: JSON.stringify({ usuario: $("#kUsuario").value, token: $("#kToken").value }) });
         config.gpu_conectada = true;
-        $("#kEstado").textContent = "✓ Cuenta conectada. Ahora pulsa Probar la GPU.";
+        $("#kEstado").textContent = "✓ Cuenta conectada. Probando la GPU…";
         $("#kProbar").disabled = false;
+        $("#kProbar").click();                 // la prueba va sola: una persona nueva no sabe que falta
       } catch (e) { $("#kEstado").textContent = "✗ " + e.message; }
     };
     $("#kProbar").onclick = async () => {
