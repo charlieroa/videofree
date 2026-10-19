@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+proyectos/
+gpu_trabajos/
+.kaggle/
+secretos/
+secretos.json
+.env
+usuarios.json
+sesiones.json
+voces_muestra/
+web/ejemplo/*.mp4

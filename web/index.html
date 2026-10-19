@@ -1,0 +1,892 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Video Simple</title>
+<style>
+  :root {
+    --fondo: #f4f2ee; --panel: #ffffff; --texto: #1d1d1f; --suave: #6b6b70;
+    --borde: #dedad3; --acento: #c2410c; --acento2: #9a3412; --ok: #15803d; --mal: #b91c1c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --fondo: #141416; --panel: #1e1e22; --texto: #ececee; --suave: #9a9aa2;
+            --borde: #34343a; --acento: #f97316; --acento2: #fb923c; --ok: #4ade80; --mal: #f87171; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+         background: var(--fondo); color: var(--texto); }
+  header { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; position: relative;
+           padding: 12px 20px; border-bottom: 1px solid var(--borde); background: var(--panel); }
+  header h1 { font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px; }
+  header h1 .logo { width: 28px; height: 28px; border-radius: 8px; background: var(--acento); color: #fff;
+                    display: inline-flex; align-items: center; justify-content: center; font-size: 15px; }
+  header h1 a { color: inherit; text-decoration: none; }
+  header .gratis { color: var(--ok); font-size: 13px; font-weight: 600; }
+  header .derecha { margin-left: auto; display: flex; gap: 8px; }
+  .ajustes { position: absolute; right: 20px; top: 100%; margin-top: 6px; z-index: 5; width: min(420px, calc(100vw - 32px));
+             background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 14px;
+             box-shadow: 0 10px 30px #0004; }
+  .ajustes[hidden] { display: none; }
+  .ajustes .grupo { display: grid; grid-template-columns: 130px 1fr; gap: 8px; align-items: center;
+                    font-size: 13px; color: var(--suave); margin: 8px 0; }
+  .ajustes .grupo .fila { flex-wrap: nowrap; }
+  .hero { text-align: center; padding: 20px 8px 8px; }
+  .hero h2 { font-size: clamp(24px, 4vw, 36px); line-height: 1.15; margin: 0 0 10px; }
+  .hero p { font-size: 17px; color: var(--suave); margin: 0 auto 18px; max-width: 620px; }
+  .hero .primario { font-size: 17px; padding: 11px 22px; border-radius: 8px; }
+  .hero .etiquetas { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  .hero .etiquetas span { font-size: 13px; color: var(--suave); border: 1px solid var(--borde); border-radius: 99px; padding: 3px 10px; }
+  .muestra { margin: 26px auto 0; max-width: 960px; }
+  .muestra video { width: 100%; border-radius: 12px; display: block; background: #000; box-shadow: 0 12px 40px #0005; }
+  .otros { max-width: 640px; margin: 26px auto 0; }
+  .otros h3 { font-size: 15px; text-align: center; margin: 0 0 10px; }
+  .otros video { width: 100%; border-radius: 10px; display: block; background: #000; }
+  .otros .pie { font-size: 13px; color: var(--suave); text-align: center; margin-top: 6px; }
+  .muestra .pie { font-size: 13px; color: var(--suave); text-align: center; margin-top: 8px; }
+  .como { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin: 30px auto 6px; max-width: 960px; }
+  .como div { border: 1px solid var(--borde); border-radius: 10px; padding: 14px; background: var(--fondo); }
+  .como b { display: block; margin: 6px 0 4px; }
+  .como .num { width: 28px; height: 28px; border-radius: 50%; background: var(--acento); color: #fff;
+               display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+  .como small { color: var(--suave); font-size: 13px; }
+  main { display: grid; grid-template-columns: 300px 1fr; gap: 20px; padding: 20px; }
+  main > * { min-width: 0; }
+  body.fuera main { grid-template-columns: 1fr; max-width: 1100px; margin: 0 auto; }
+  body.fuera aside, body.fuera .solo-dentro { display: none !important; }
+  body:not(.fuera) .solo-fuera { display: none !important; }
+  header .quien { font-size: 13px; color: var(--suave); display: flex; align-items: center; gap: 6px; }
+  .acceso { max-width: 400px; }
+  .con-ojo { position: relative; display: block; flex: 1; }
+  .con-ojo input { padding-right: 40px; }
+  .con-ojo .ojo { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: 0;
+                  background: transparent; padding: 4px 6px; font-size: 16px; line-height: 1; color: var(--suave); }
+  .con-ojo .ojo:hover { color: var(--texto); }
+  .acceso .pestanas { display: flex; gap: 6px; margin: 4px 0 14px; }
+  .acceso .pestanas button.activa { border-color: var(--acento); color: var(--acento); }
+  .acceso .error { color: var(--mal); font-size: 13px; min-height: 18px; margin-top: 8px; }           /* sin esto, lo ancho de dentro estira la columna */
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; padding: 16px; }
+    #vista { order: -1; }              /* en el movil, la portada y el video primero */
+    header { padding: 10px 16px; }
+    header .gratis { display: none; }
+  }
+  .panel { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 16px; }
+  h2 { font-size: 15px; margin: 0 0 10px; }
+  label { display: block; font-size: 13px; color: var(--suave); margin: 10px 0 4px; }
+  input, textarea, select { width: 100%; font: inherit; color: var(--texto); background: var(--fondo);
+    border: 1px solid var(--borde); border-radius: 6px; padding: 7px 9px; }
+  textarea { resize: vertical; }
+  button { font: inherit; border: 1px solid var(--borde); background: var(--panel); color: var(--texto);
+           border-radius: 6px; padding: 7px 12px; cursor: pointer; }
+  button:hover { border-color: var(--acento); }
+  button.primario { background: var(--acento); border-color: var(--acento); color: #fff; }
+  button.primario:hover { background: var(--acento2); }
+  button:disabled { opacity: .45; cursor: default; }
+  .lista a { display: block; padding: 8px 10px; border-radius: 6px; color: inherit; text-decoration: none; }
+  .lista a:hover, .lista a.activo { background: var(--fondo); }
+  .lista small { color: var(--suave); }
+  .pasos { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  .estado { font-size: 13px; color: var(--suave); }
+  .escenas { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-top: 14px; }
+  .escena { border: 1px solid var(--borde); border-radius: 8px; padding: 10px; background: var(--fondo); }
+  .escena.activa { border-color: var(--acento); }
+  .escena .media { aspect-ratio: 16/9; background: #0003; border-radius: 6px; overflow: hidden; position: relative;
+                   display: flex; align-items: center; justify-content: center; color: var(--suave);
+                   font-size: 13px; text-align: center; padding: 0; }
+  .escena .media span { padding: 10px; }
+  .escena img, .escena video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .escena .clipia { position: absolute; right: 6px; top: 6px; background: var(--acento); color: #fff;
+                    font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+  .escena .reusa { position: absolute; left: 6px; top: 6px; background: #000a; color: #fff;
+                   font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+  .escena .cab { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 13px; }
+  .escena textarea { font-size: 13px; }
+  .escena .botones { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .escena .botones button { font-size: 12px; padding: 5px 8px; }
+  .registro { font: 12px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; max-height: 220px;
+              overflow: auto; background: var(--fondo); border-radius: 6px; padding: 10px; color: var(--suave); }
+  .final video { width: 100%; max-width: 960px; border-radius: 8px; }
+  .fila { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .ayuda { font-size: 13px; color: var(--suave); border-left: 3px solid var(--acento); padding: 4px 10px; margin: 8px 0; }
+  .velo { position: fixed; inset: 0; background: #0008; display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .velo[hidden] { display: none; }
+  .asistente { background: var(--panel); border-radius: 12px; max-width: 640px; width: 100%; max-height: 92vh; overflow: auto; padding: 24px; }
+  .asistente h2 { font-size: 20px; margin-bottom: 4px; }
+  .asistente .paso-n { font-size: 12px; color: var(--suave); text-transform: uppercase; letter-spacing: .05em; }
+  .asistente ol { padding-left: 20px; }
+  .asistente li { margin: 6px 0; }
+  .opcion { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--borde); border-radius: 8px; padding: 10px 12px; margin: 8px 0; cursor: pointer; color: var(--texto); font-size: 15px; }
+  .opcion input { width: auto; margin-top: 3px; }
+  .opcion.off { opacity: .5; cursor: default; }
+  .opcion small { color: var(--suave); display: block; font-size: 13px; }
+  .chequeo { display: flex; gap: 8px; margin: 6px 0; }
+  .bien { color: var(--ok); } .mal { color: var(--mal); }
+  .navegar { display: flex; justify-content: space-between; margin-top: 20px; gap: 8px; }
+  .asistente a, .ayuda a { color: var(--acento); }
+  .voz-elige { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .voz-elige select { flex: 1 1 100%; min-width: 0; }
+  aside .voz-elige button { flex: 1; }
+  .panel-voz h2 { display: flex; align-items: center; gap: 6px; }
+  .voz-elige button, .opcion .oir { white-space: nowrap; }
+  .opcion .oir { margin-left: auto; font-size: 13px; padding: 4px 9px; }
+  .opcion > span { flex: 1; }
+  .voces-pais { max-height: 300px; overflow: auto; }
+  /* tablero de videos */
+  .tablero-cab { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .tablero-cab h2 { font-size: 22px; margin: 0; }
+  .cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 16px 0; }
+  .cifras div { background: var(--fondo); border: 1px solid var(--borde); border-radius: 10px; padding: 10px 12px; }
+  .cifras b { display: block; font-size: 22px; }
+  .cifras small { color: var(--suave); font-size: 12px; }
+  .filtros { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .filtros button { border-radius: 99px; font-size: 13px; padding: 5px 12px; }
+  .filtros button.activa { background: var(--acento); border-color: var(--acento); color: #fff; }
+  .tarjetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+  .tarjeta { border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; background: var(--fondo); display: flex; flex-direction: column; }
+  .tarjeta .mini { aspect-ratio: 16/9; background: #0004; position: relative; display: flex; align-items: center; justify-content: center; color: var(--suave); font-size: 13px; text-decoration: none; }
+  .tarjeta .mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tarjeta .dur { position: absolute; right: 6px; bottom: 6px; background: #000c; color: #fff; font-size: 12px; padding: 1px 6px; border-radius: 4px; }
+  .tarjeta .chapa { position: absolute; left: 6px; top: 6px; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; color: #fff; background: #555; }
+  .chapa.listo { background: var(--ok); color: #04210f; } .chapa.publicado { background: #2563eb; }
+  .chapa.trabajando { background: var(--acento); }
+  .tarjeta .cuerpo { padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .tarjeta .cuerpo b { font-size: 14px; line-height: 1.3; }
+  .tarjeta .cuerpo small { color: var(--suave); font-size: 12px; }
+  .tarjeta .acciones { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; padding-top: 8px; }
+  .tarjeta .acciones a, .tarjeta .acciones button { font-size: 12px; padding: 5px 9px; border: 1px solid var(--borde); border-radius: 6px; color: var(--texto); text-decoration: none; background: var(--panel); }
+  .tarjeta .publicar { display: flex; gap: 6px; margin-top: 6px; }
+  .tarjeta .publicar[hidden] { display: none; }
+  .tarjeta .publicar input { font-size: 12px; padding: 5px 7px; }
+  .tarjeta.nueva { align-items: center; justify-content: center; border-style: dashed; min-height: 220px; cursor: pointer; color: var(--suave); font-size: 15px; gap: 6px; }
+  .tarjeta.nueva:hover { border-color: var(--acento); color: var(--acento); }
+  .clon { margin-top: 8px; padding: 10px; border: 1px dashed var(--borde); border-radius: 8px; font-size: 13px; }
+  .clon[hidden] { display: none; }
+  .clon p { margin: 0 0 8px; color: var(--suave); }
+  .clon .fila { gap: 6px; }
+  .clon label { margin: 8px 0 0; display: flex; gap: 6px; align-items: flex-start; }
+  .clon label input { width: auto; margin-top: 2px; }
+</style>
+</head>
+<body class="fuera">
+<header>
+  <h1><a href="#"><span class="logo">▶</span> Video Simple</a></h1><span class="gratis">0 $ por vídeo</span>
+  <div class="derecha">
+    <span class="quien solo-dentro" id="quien"></span>
+    <button id="abrirAsistente" class="solo-dentro">Asistente</button><button id="abrirAjustes" class="solo-dentro">Ajustes</button>
+    <button id="salir" class="solo-dentro">Salir</button>
+    <button id="entrar" class="primario solo-fuera">Entrar</button>
+  </div>
+  <div class="ajustes" id="ajustes" hidden>
+    <h2>Ajustes</h2>
+    <div class="grupo">Guion <select id="motorGuion"><option value="manual">ChatGPT a mano</option><option value="claude">Claude (tu suscripción)</option><option value="ollama">Ollama (local)</option></select></div>
+    <div class="grupo">Imágenes <select id="motorImagen"><option value="pollinations">Pollinations (automático)</option><option value="manual">Las pego yo (ChatGPT…)</option><option value="kaggle">GPU Kaggle (gratis, sin límite, mejor calidad)</option></select></div>
+    <div class="grupo">Voz <select id="voz"></select></div>
+    <div class="grupo">Clave Pollinations <span class="fila"><input id="token" type="password" placeholder="opcional, quita la marca de agua"><button id="guardarToken">Guardar</button></span></div>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <div class="panel panel-voz" style="margin-bottom:16px">
+      <h2>🎙 Voz</h2>
+      <p class="estado" style="margin:0 0 8px">Elige y escucha la voz de tus vídeos nuevos. Las de arriba suenan más naturales (van en tu GPU de Kaggle).</p>
+      <div id="nVozCaja"></div>
+    </div>
+    <div class="panel">
+      <h2>Nuevo vídeo</h2>
+      <label>Título</label><input id="nTitulo" placeholder="Ej.: La caída de Roma">
+      <label>Material (lo que quieres contar)</label>
+      <textarea id="nTexto" rows="8" placeholder="Pega aquí el texto, un resumen o las ideas del vídeo"></textarea>
+      <label>Minutos</label><input id="nMinutos" type="number" min="0.5" step="0.5" value="1">
+      <label>Estilo visual (opcional)</label><input id="nEstilo" placeholder="Ej.: ilustración acuarela, colores cálidos">
+      <label>Tono de la narración</label>
+      <select id="nTono">
+        <option value="">Divulgativo y ameno</option>
+        <option value="humor">Humor y cercano (tipo «Ancient Life»)</option>
+        <option value="documental">Documental serio</option>
+        <option value="infantil">Infantil</option>
+        <option value="inspirador">Inspirador / devocional (tipo «BibleFix»)</option>
+        <option value="misterio">Misterio e intriga</option>
+      </select>
+      <label class="fila"><input id="nMovimiento" type="checkbox" style="width:auto" checked> Movimiento IA en todas las escenas (GPU Kaggle: gente que respira y habla, humo, luz…)</label>
+      <label class="fila"><input id="nSimular" type="checkbox" style="width:auto"> Modo prueba (sin IA: trocea tu texto, voz muda e imágenes de prueba)</label>
+      <div style="margin-top:12px"><button class="primario" id="crear">Crear</button></div>
+    </div>
+    <div class="panel lista" style="margin-top:16px">
+      <h2>Vídeos</h2><div id="lista"></div>
+    </div>
+  </aside>
+
+  <section id="vista" class="panel">
+    <div class="hero">
+      <h2>De un texto a un vídeo narrado</h2>
+      <p>Escribe de qué va tu vídeo. Video Simple escribe el guion, pone la voz, crea las imágenes, las anima y añade subtítulos. Gratis.</p>
+      <button class="primario" id="empezar">Crear mi vídeo</button>
+      <div class="etiquetas"><span>Sin tarjeta</span><span>Voz en español</span><span>Hasta 14 min o más</span><span>Vídeo IA con GPU gratis</span></div>
+    </div>
+    <div class="muestra" id="ejemplo">
+      <video controls preload="metadata" src="/ejemplo/ejemplo.mp4" poster="/ejemplo/portada.jpg"
+             onerror="document.getElementById('ejemplo').hidden = true"></video>
+      <div class="pie">Ejemplo real de 5 minutos hecho con Video Simple, gratis: «5 hábitos de la mañana que fortalecen tu fe cada día». Imágenes generadas en una GPU gratis de Kaggle.</div>
+    </div>
+    <div class="otros" id="otroEjemplo">
+      <h3>Otro estilo: dibujos animados de historia, con humor</h3>
+      <video controls preload="none" src="/ejemplo/romano.mp4" poster="/ejemplo/romano.jpg"
+             onerror="document.getElementById('otroEjemplo').hidden = true"></video>
+      <div class="pie">«¿Qué hacía realmente un romano en un día normal?» · 6 minutos</div>
+    </div>
+    <div class="como">
+      <div><span class="num">1</span><b>Escribe el tema</b><small>Pega un texto, un resumen o tus ideas, y elige los minutos.</small></div>
+      <div><span class="num">2</span><b>Guion y voz</b><small>Se escribe por capítulos y se narra con voz natural en español.</small></div>
+      <div><span class="num">3</span><b>Imágenes coherentes</b><small>Mismo estilo y personajes en todo el vídeo. Puedes rehacer o pegar las tuyas.</small></div>
+      <div><span class="num">4</span><b>Vídeo listo</b><small>Animación, subtítulos y MP4 en 1080p. Con GPU gratis, planos con vídeo IA real.</small></div>
+    </div>
+  </section>
+</main>
+
+<input type="file" id="archivo" accept="image/*" hidden>
+<div id="velo" class="velo" hidden><div class="asistente" id="asistente"></div></div>
+
+<script>
+const $ = s => document.querySelector(s);
+let actual = null, datos = null, temporizador = null, activa = null, config = null, voces = [];
+
+async function api(ruta, opciones = {}) {
+  const r = await fetch(ruta, { headers: { "Content-Type": "application/json" }, ...opciones });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401 && !ruta.startsWith("/api/entrar")) { mostrarAcceso(); throw new Error(j.detail || "Entra con tu usuario."); }
+  if (!r.ok) throw new Error(j.detail || r.statusText);
+  return j;
+}
+const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const archivo = rel => `/archivos/${actual}/${rel}?t=${Math.floor(datos.sello)}`;
+const guardarCfg = cambio => api("/api/config", { method: "POST", body: JSON.stringify(cambio) }).then(c => { config = c; pintarCfg(); refrescar(); });
+
+// ---------------------------------------------------------------- voces
+// Las voces en español van agrupadas por país, y todas se pueden escuchar antes.
+const nombreVoz = id => { const v = voces.find(x => x.id === id); return v ? `${v.nombre} · ${v.pais}${v.genero ? " · " + v.genero : ""}` : id; };
+function opcionesVoz(elegida) {
+  const paises = [...new Set(voces.map(v => v.pais))];
+  return paises.map(p => `<optgroup label="${esc(p)}">${voces.filter(v => v.pais === p).map(v =>
+    `<option value="${v.id}" ${v.id === elegida ? "selected" : ""}>${esc(v.nombre)}${v.gpu ? (v.lista ? " (GPU Kaggle)" : " (sube tu grabación)") : " · " + esc(v.pais) + (v.genero ? " (" + v.genero + ")" : "")}</option>`).join("")}</optgroup>`).join("");
+}
+let sonando = null;
+// Pulsar ▶ la reproduce; pulsar otra vez el mismo botón la para.
+function oir(id, boton) {
+  const ficha = voces.find(v => v.id === id) || {};
+  if (id === "chatterbox:clon" && !ficha.lista) return alert("Primero sube o graba 10-20 segundos de tu voz.");
+  if (id === "chatterbox:base" && !ficha.prueba) return alert("Chatterbox habla en tu GPU de Kaggle: pulsa «🧪 Probar en mi GPU» y en unos minutos la escuchas aquí.");
+  if (sonando) {
+    const mismo = sonando.boton === boton;
+    sonando.parar();
+    if (mismo) return;
+  }
+  const a = new Audio(`/api/voces/${encodeURIComponent(id)}/muestra?t=${Date.now()}`);
+  a.boton = boton;
+  a.parar = () => { a.pause(); boton.textContent = "▶ Escuchar"; if (sonando === a) sonando = null; };
+  sonando = a;
+  boton.textContent = "⏳";
+  a.onplaying = () => { boton.textContent = "■ Parar"; };
+  a.onended = a.parar;
+  a.onerror = () => { a.parar(); alert("No se pudo escuchar esa voz. Revisa tu conexión."); };
+  a.play().catch(() => a.parar());
+}
+// Un desplegable de voz con su botón de escuchar. alCambiar recibe la voz nueva.
+function selectorVoz(caja, elegida, alCambiar) {
+  caja.innerHTML = `<div class="voz-elige"><select>${opcionesVoz(elegida)}</select><button type="button">▶ Escuchar</button></div>
+    <div class="fila probar-gpu" style="margin-top:6px"><button type="button">🧪 Probar en mi GPU</button><span class="estado"></span></div>`;
+  const sel = caja.querySelector("select"), b = caja.querySelector(".voz-elige button");
+  const fila = caja.querySelector(".probar-gpu"), bp = fila.querySelector("button"), info = fila.querySelector(".estado");
+  const verFila = () => { fila.hidden = !sel.value.startsWith("chatterbox:"); fila.style.display = fila.hidden ? "none" : ""; };
+  b.onclick = () => oir(sel.value, b);
+  bp.onclick = async () => {
+    try { pintarPrueba(await api("/api/voz/probar", { method: "POST", body: JSON.stringify({ voz: sel.value }) })); }
+    catch (e) { info.textContent = "✗ " + e.message; }
+  };
+  sel.onchange = () => { if (sonando) sonando.parar(); verFila(); if (alCambiar) alCambiar(sel.value); };
+  verFila();
+  if (pruebaVoz.fase !== "nada") pintarPrueba(pruebaVoz);
+  return sel;
+}
+// La prueba en Kaggle tarda minutos: se mira cada 5 s y se enseña en todos los selectores.
+let pruebaVoz = { fase: "nada", detalle: "" }, relojPrueba = null;
+function pintarPrueba(e) {
+  pruebaVoz = e;
+  document.querySelectorAll(".probar-gpu").forEach(f => {
+    f.querySelector(".estado").textContent = e.detalle || "";
+    f.querySelector("button").disabled = e.fase === "probando";
+  });
+  clearTimeout(relojPrueba);
+  if (e.fase === "probando") relojPrueba = setTimeout(async () => pintarPrueba(await api("/api/voz/probar")), 5000);
+  else if (e.fase === "ok") api("/api/voces").then(v => voces = v);
+}
+
+// Clonar la voz: la persona sube o graba 10-20 s de SU voz.
+const CLON = `<div class="clon" id="clon" hidden>
+  <p>Sube o graba <b>10-20 segundos</b> hablando tranquilo, sin música ni ruido. Chatterbox la imita en tu GPU de Kaggle.</p>
+  <div class="fila"><button type="button" id="clonGrabar">🎙 Grabar 15 s</button>
+    <button type="button" id="clonSubir">Subir audio</button><input type="file" id="clonArchivo" accept="audio/*" hidden></div>
+  <label><input type="checkbox" id="clonPermiso"> Es mi voz, o tengo permiso de su dueño para usarla.</label>
+  <div class="estado" id="clonEstado"></div></div>`;
+function enlazarClon() {
+  const estado = t => $("#clonEstado").textContent = t;
+  const enviar = async blob => {
+    if (!$("#clonPermiso").checked) return estado("Marca la casilla de permiso y vuelve a intentarlo.");
+    estado("Guardando…");
+    const url = await new Promise(ok => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(blob); });
+    try {
+      const r = await api("/api/voz/muestra", { method: "POST", body: JSON.stringify({ audio: url, permiso: true }) });
+      voces = await api("/api/voces");
+      estado(`✓ Voz guardada (${r.segundos} s). Ahora pulsa «🧪 Probar en mi GPU» para oírla con Chatterbox.`);
+    } catch (e) { estado("✗ " + e.message); }
+  };
+  $("#clonSubir").onclick = () => $("#clonArchivo").click();
+  $("#clonArchivo").onchange = ev => { const f = ev.target.files[0]; if (f) enviar(f); ev.target.value = ""; };
+  $("#clonGrabar").onclick = async () => {
+    if (!$("#clonPermiso").checked) return estado("Marca primero la casilla de permiso.");
+    let flujo;
+    try { flujo = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch { return estado("✗ El navegador no deja usar el micrófono."); }
+    const rec = new MediaRecorder(flujo), partes = [];
+    rec.ondataavailable = ev => partes.push(ev.data);
+    rec.onstop = () => { flujo.getTracks().forEach(t => t.stop()); $("#clonGrabar").disabled = false; enviar(new Blob(partes, { type: rec.mimeType })); };
+    rec.start(); $("#clonGrabar").disabled = true;
+    let quedan = 15;
+    estado(`🔴 Grabando… habla con naturalidad (${quedan} s)`);
+    const reloj = setInterval(() => {
+      quedan--;
+      if (quedan > 0) return estado(`🔴 Grabando… habla con naturalidad (${quedan} s)`);
+      clearInterval(reloj); rec.stop();
+    }, 1000);
+  };
+}
+
+async function cargarConfig() {
+  [config, voces, pruebaVoz] = await Promise.all([api("/api/config"), api("/api/voces"), api("/api/voz/probar")]);
+  pintarCfg();
+}
+function pintarCfg() {
+  $("#voz").innerHTML = opcionesVoz(config.voz);
+  if (!$("#nVozCaja").dataset.hecho) {
+    $("#nVozCaja").dataset.hecho = "1";
+    const sel = selectorVoz($("#nVozCaja"), config.voz, v => { $("#clon").hidden = v !== "chatterbox:clon"; });
+    $("#nVozCaja").insertAdjacentHTML("beforeend", CLON);
+    $("#clon").hidden = sel.value !== "chatterbox:clon";
+    enlazarClon();
+  }
+  $("#motorGuion").value = config.motor_guion;
+  $("#motorImagen").value = config.motor_imagen;
+  $("#token").placeholder = config.token_pollinations ? "token guardado ✓" : "opcional, quita la marca de agua";
+}
+$("#voz").onchange = () => guardarCfg({ voz: $("#voz").value });
+$("#motorGuion").onchange = () => guardarCfg({ motor_guion: $("#motorGuion").value });
+$("#motorImagen").onchange = () => guardarCfg({ motor_imagen: $("#motorImagen").value });
+$("#guardarToken").onclick = () => { guardarCfg({ token_pollinations: $("#token").value }); $("#token").value = ""; };
+
+async function cargarLista() {
+  const l = await api("/api/proyectos");
+  $("#lista").innerHTML = l.map(p => `<a href="#${p.id}" class="${p.id === actual ? "activo" : ""}">
+    ${esc(p.titulo)}<br><small>${p.creado.slice(0, 16)} · ${p.ocupado ? "⏳ trabajando" : ESTADOS[p.estado] || ""}</small></a>`).join("")
+    || `<p class="estado">Todavía no hay ninguno.</p>`;
+}
+
+$("#crear").onclick = async () => {
+  try {
+    const p = await api("/api/proyectos", { method: "POST", body: JSON.stringify({
+      titulo: $("#nTitulo").value, texto: $("#nTexto").value, minutos: +$("#nMinutos").value || 1,
+      estilo: $("#nEstilo").value, tono: $("#nTono").value, simular: $("#nSimular").checked,
+      voz: $("#nVozCaja select")?.value || "", movimiento: $("#nMovimiento").checked }) });
+    location.hash = p.id;
+  } catch (e) { alert(e.message); }
+};
+
+window.onhashchange = () => abrir(location.hash.slice(1));
+async function abrir(pid) {
+  actual = pid; activa = null;
+  if (pid) { await refrescar(); }
+  else if (sesion.usuario) { clearTimeout(temporizador); pintarTablero(); }
+  else { clearTimeout(temporizador); $("#vista").innerHTML = INICIO; enlazarInicio(); }
+  if (sesion.usuario) cargarLista();
+}
+
+// La portada se guarda tal cual para volver a ella al pulsar el logo.
+const INICIO = $("#vista").innerHTML;
+function enlazarInicio() {
+  const b = $("#empezar");
+  if (b) b.onclick = () => {
+    if (!sesion.usuario) return mostrarAcceso();
+    $("#nTitulo").focus(); $("#nTitulo").scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+}
+enlazarInicio();
+$("#abrirAjustes").onclick = ev => { ev.stopPropagation(); $("#ajustes").hidden = !$("#ajustes").hidden; };
+document.addEventListener("click", ev => {
+  if (!$("#ajustes").hidden && !$("#ajustes").contains(ev.target)) $("#ajustes").hidden = true;
+});
+
+// ------------------------------------------------------------- tablero
+// La portada de quien ha entrado: todos sus videos, en qué punto va cada uno y lo publicado.
+const ESTADOS = { guion: "Guion", voz: "Falta voz", imagenes: "Faltan imágenes", montaje: "Falta montar",
+                  listo: "Listo", publicado: "Publicado" };
+let filtro = "todos", relojTablero = null;
+const mmss = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+
+async function pintarTablero() {
+  clearTimeout(relojTablero);
+  let l;
+  try { l = await api("/api/proyectos"); } catch (e) { return; }
+  if (actual) return;                                   // se abrió un video mientras cargaba
+  const grupos = { todos: l,
+                   proceso: l.filter(p => p.ocupado || !["listo", "publicado"].includes(p.estado)),
+                   listo: l.filter(p => p.estado === "listo" && !p.ocupado),
+                   publicado: l.filter(p => p.estado === "publicado") };
+  const ver = grupos[filtro] || l;
+  const minutos = l.reduce((s, p) => s + (p.mp4 ? p.segundos : 0), 0) / 60;
+  $("#vista").innerHTML = `
+    <div class="tablero-cab"><h2>Tus vídeos</h2><button class="primario" id="tNuevo">+ Nuevo vídeo</button></div>
+    <div class="cifras">
+      <div><b>${l.length}</b><small>creados</small></div>
+      <div><b>${grupos.proceso.length}</b><small>en proceso</small></div>
+      <div><b>${grupos.listo.length}</b><small>listos para subir</small></div>
+      <div><b>${grupos.publicado.length}</b><small>publicados</small></div>
+      <div><b>${minutos.toFixed(1)}</b><small>minutos de vídeo hecho</small></div>
+    </div>
+    <div class="filtros">${[["todos", "Todos"], ["proceso", "En proceso"], ["listo", "Listos"], ["publicado", "Publicados"]].map(([k, t]) =>
+      `<button data-filtro="${k}" class="${filtro === k ? "activa" : ""}">${t} · ${grupos[k].length}</button>`).join("")}</div>
+    <div class="tarjetas">${ver.map(tarjetaVideo).join("")}
+      ${filtro === "todos" || filtro === "proceso" ? `<div class="tarjeta nueva" id="tNuevo2"><span style="font-size:28px">+</span>Nuevo vídeo</div>` : ""}</div>
+    ${!ver.length && filtro !== "todos" ? `<p class="estado">No hay vídeos aquí todavía.</p>` : ""}`;
+  document.querySelectorAll("[data-filtro]").forEach(b => b.onclick = () => { filtro = b.dataset.filtro; pintarTablero(); });
+  [$("#tNuevo"), $("#tNuevo2")].forEach(b => b && (b.onclick = () => {
+    $("#nTitulo").focus(); $("#nTitulo").scrollIntoView({ behavior: "smooth", block: "center" });
+  }));
+  document.querySelectorAll("[data-publicar]").forEach(b => b.onclick = () => {
+    const caja = document.querySelector(`#pub-${b.dataset.publicar}`);
+    caja.hidden = !caja.hidden;
+    if (!caja.hidden) caja.querySelector("input").focus();
+  });
+  document.querySelectorAll("[data-guardar-pub]").forEach(b => b.onclick = async () => {
+    const id = b.dataset.guardarPub, url = document.querySelector(`#pub-${id} input`).value;
+    try { await api(`/api/proyectos/${id}/publicado`, { method: "POST", body: JSON.stringify({ publicado: true, url }) }); }
+    catch (e) { return alert(e.message); }
+    pintarTablero(); cargarLista();
+  });
+  document.querySelectorAll("[data-despublicar]").forEach(b => b.onclick = async () => {
+    try { await api(`/api/proyectos/${b.dataset.despublicar}/publicado`, { method: "POST", body: JSON.stringify({ publicado: false }) }); }
+    catch (e) { return alert(e.message); }
+    pintarTablero(); cargarLista();
+  });
+  // Mientras algo se esté haciendo, el tablero se pone al día solo.
+  if (l.some(p => p.ocupado)) relojTablero = setTimeout(() => { if (!actual) pintarTablero(); }, 8000);
+}
+
+function tarjetaVideo(p) {
+  const chapa = p.ocupado ? ["trabajando", "⏳ Trabajando"] : [p.estado, ESTADOS[p.estado] || p.estado];
+  const mini = p.portada ? `<img src="/archivos/${p.id}/${p.portada}" loading="lazy" alt="">` : `<span>Sin imagen todavía</span>`;
+  const pub = p.publicado;
+  return `<div class="tarjeta">
+    <a class="mini" href="#${p.id}">${mini}<span class="chapa ${chapa[0]}">${chapa[1]}</span>
+      ${p.segundos ? `<span class="dur">${mmss(p.segundos)}</span>` : ""}</a>
+    <div class="cuerpo">
+      <b>${esc(p.titulo)}</b>
+      <small>${esc(p.creado.slice(0, 10))} · ${p.escenas} escenas${p.clips ? ` · ${p.clips} clips IA` : ""}${p.simular ? " · prueba" : ""}</small>
+      <small>🎙 ${esc(nombreVoz(p.voz || config.voz))}</small>
+      ${pub ? `<small>✓ Publicado ${esc(pub.fecha)}${pub.url ? ` · <a href="${esc(pub.url)}" target="_blank" rel="noopener">ver en YouTube</a>` : ""}</small>` : ""}
+      <div class="acciones">
+        <a href="#${p.id}">Abrir</a>
+        ${p.mp4 ? `<a href="/archivos/${p.id}/${p.mp4}" download>Descargar MP4</a>` : ""}
+        ${p.mp4 && !pub ? `<button data-publicar="${p.id}">Marcar publicado</button>` : ""}
+        ${pub ? `<button data-despublicar="${p.id}">Quitar de publicados</button>` : ""}
+      </div>
+      <div class="publicar" id="pub-${p.id}" hidden><input placeholder="Enlace de YouTube (opcional)"><button data-guardar-pub="${p.id}">Guardar</button></div>
+    </div></div>`;
+}
+
+async function refrescar() {
+  if (!actual) return;
+  clearTimeout(temporizador);
+  try { datos = await api(`/api/proyectos/${actual}`); } catch (e) { $("#vista").innerHTML = esc(e.message); return; }
+  const foco = document.activeElement;
+  const editando = foco && foco.dataset && foco.dataset.campo;
+  const viendo = document.querySelector(".escena video:hover");
+  const eligiendoVoz = (foco && foco.closest && foco.closest("#pVoz")) || (sonando && sonando.boton.closest("#pVoz"));
+  if (!editando && !viendo && !eligiendoVoz) pintar();
+  temporizador = setTimeout(refrescar, datos.ocupado ? 2000 : 8000);
+}
+
+function pintar() {
+  const d = datos, est = d.estimacion, ocupado = d.ocupado, vi = d.video_ia || {};
+  const hay = d.escenas.length > 0;
+  const conVoz = hay && d.escenas.every(e => e.audio);
+  const conImg = hay && d.escenas.every(e => e.imagen);
+  const dur = d.escenas.reduce((s, e) => s + (e.duracion || 0), 0);
+  const faltanImg = d.escenas.filter(e => !e.imagen).length;
+  const plan = est.motor === "pollinations" ? `${est.imagenes} imágenes por generar (~${est.minutos_imagenes} min)`
+    : est.motor === "kaggle" ? `${est.imagenes} imágenes por generar en tu GPU de Kaggle (~${est.minutos_imagenes} min)${!config.gpu_conectada ? " · GPU sin conectar" : ""}`
+    : est.motor === "manual" ? `${faltanImg} escenas esperan tu imagen` : "imágenes de prueba";
+
+  $("#vista").innerHTML = `
+    <div class="fila" style="justify-content:space-between">
+      <h2 style="margin:0">${esc(d.biblia?.titulo || d.titulo)}</h2>
+      <span class="fila" style="gap:14px"><label class="fila" style="margin:0" title="Anima todas las escenas en tu GPU de Kaggle, con la cámara quieta"><input type="checkbox" id="movimiento" ${d.movimiento ? "checked" : ""} ${ocupado ? "disabled" : ""} style="width:auto"> Movimiento IA en todo</label>
+      <label class="fila" style="margin:0"><input type="checkbox" id="simular" ${d.simular ? "checked" : ""} ${ocupado ? "disabled" : ""} style="width:auto"> Modo prueba</label></span>
+    </div>
+    <p class="estado">${d.escenas.length} escenas · ${(dur / 60).toFixed(1)} min de voz · ${plan} · coste 0 $</p>
+    <div class="fila" style="max-width:520px"><span class="estado">Voz del vídeo</span><div id="pVoz" style="flex:1"></div></div>
+    ${(d.voz || config.voz) === "chatterbox:clon" && !voces.find(v => v.id === "chatterbox:clon")?.lista ? `<p class="ayuda">Para usar tu voz clonada, sube o graba tu voz en el panel de la izquierda (Voz → Tu voz clonada).</p>` : ""}
+    ${(d.voz || config.voz || "").startsWith("chatterbox:") && !config.gpu_conectada ? `<p class="ayuda">Esta voz va en tu GPU de Kaggle: conéctala en el Asistente.</p>` : ""}
+    ${vi.marcadas ? `<p class="estado">🎬 ${vi.marcadas} escenas con vídeo IA · ${vi.con_clip} con clip
+      ${vi.faltan ? ` · faltan ${vi.faltan}: ~${vi.horas} h de GPU de tus ${vi.horas_semana} h semanales de Kaggle${vi.medido ? " (medido)" : " (estimado)"}` : ""}
+      ${vi.sin_imagen ? ` · ${vi.sin_imagen} aún sin imagen` : ""}</p>` : ""}
+    <div class="pasos">
+      <button data-paso="guion" ${ocupado || (config.motor_guion === "manual" && !d.simular) ? "disabled" : ""}>1 · Guion</button>
+      <button data-paso="voz" ${ocupado || !hay ? "disabled" : ""}>2 · Voz</button>
+      <button data-paso="imagenes" ${ocupado || !hay ? "disabled" : ""}>3 · Imágenes</button>
+      <button id="pasoClips" ${ocupado || !hay ? "disabled" : ""} title="Anima con IA las escenas marcadas «Vídeo IA (GPU)» en la GPU gratis de Kaggle">3b · Clips IA (GPU Kaggle)${!config.gpu_conectada && !d.simular ? " · sin conectar" : ""}</button>
+      <button data-paso="montaje" ${ocupado || !conImg || !conVoz ? "disabled" : ""}>4 · Animar y montar MP4</button>
+      <button class="primario" data-paso="todo" ${ocupado ? "disabled" : ""}>Hacer todo</button>
+    </div>
+    ${est.motor === "manual" && hay ? `<p class="ayuda">Imágenes a mano: en cada escena pulsa <b>Copiar prompt</b>, pégalo en ChatGPT (o Gemini, Bing…),
+      copia la imagen que te dé y pégala aquí con <b>Ctrl+V</b> con el ratón encima de la escena, o usa <b>Subir imagen</b>.</p>` : ""}
+    ${!hay && config.motor_guion === "manual" && !d.simular ? `<div class="ayuda"><b>Guion con ChatGPT (gratis):</b>
+      1) <button id="copiarGuion">Copiar prompt del guion</button> 2) pégalo en <a href="https://chatgpt.com" target="_blank">ChatGPT</a>
+      3) copia toda su respuesta y pégala aquí:
+      <textarea id="guionPegado" rows="5" placeholder="Pega aquí la respuesta de ChatGPT (el JSON)" style="margin-top:6px"></textarea>
+      <button class="primario" id="usarGuion" style="margin-top:6px">Usar este guion</button></div>` : ""}
+    ${ocupado ? `<p class="estado">⏳ Trabajando: ${esc(d.trabajo?.paso || "")}…</p>` : ""}
+    ${d.mp4 ? `<div class="final"><h2>Vídeo final</h2><video controls src="${archivo(d.mp4)}"></video>
+      <p><a href="${archivo(d.mp4)}" download>Descargar MP4</a></p></div>` : ""}
+    ${d.biblia ? `<details><summary>Estilo y personajes (se repiten en cada imagen)</summary>
+      <p class="estado">${esc(d.biblia.estilo_visual)}</p>
+      <ul>${(d.biblia.personajes || []).map(p => `<li><b>${esc(p.nombre)}</b>: ${esc(p.descripcion_visual)}</li>`).join("")}</ul>
+      ${d.hoja ? `<p class="estado">Hoja de personajes (la GPU la usa como referencia en cada escena):</p>
+      <a href="${archivo(d.hoja)}" target="_blank"><img src="${archivo(d.hoja)}" alt="Hoja de personajes" style="max-width:100%;border-radius:8px"></a>` : ""}</details>` : ""}
+    <div class="escenas">${d.escenas.map(e => tarjeta(e, ocupado)).join("")}</div>
+    <h2 style="margin-top:18px">Registro</h2>
+    <div class="registro" id="registro">${esc(d.registro.slice(-60).join("\n"))}</div>`;
+
+  const reg = $("#registro"); reg.scrollTop = reg.scrollHeight;
+  const selVoz = selectorVoz($("#pVoz"), d.voz || config.voz, async nueva => {
+    if (d.escenas.some(e => e.audio) && !confirm(`¿Cambiar a ${nombreVoz(nueva)}? Habrá que volver a narrar el vídeo (paso 2 · Voz).`)) {
+      selVoz.value = d.voz || config.voz; return;
+    }
+    try { await api(`/api/proyectos/${actual}/ajustes`, { method: "POST", body: JSON.stringify({ voz: nueva }) }); }
+    catch (e) { alert(e.message); }
+    refrescar();
+  });
+  selVoz.disabled = ocupado;
+  document.querySelectorAll("[data-paso]").forEach(b => b.onclick = () => lanzar(b.dataset.paso));
+  $("#pasoClips").onclick = () => lanzarClips();
+  if ($("#copiarGuion")) {
+    $("#copiarGuion").onclick = async ev => {
+      const { prompt } = await api(`/api/proyectos/${actual}/guion_prompt`);
+      await navigator.clipboard.writeText(prompt);
+      ev.target.textContent = "✓ Copiado";
+    };
+    $("#usarGuion").onclick = async () => {
+      try { await api(`/api/proyectos/${actual}/guion_pegado`, { method: "POST", body: JSON.stringify({ texto: $("#guionPegado").value }) }); }
+      catch (e) { alert(e.message); }
+      refrescar();
+    };
+  }
+  $("#movimiento").onchange = async ev => {
+    if (!ev.target.checked && d.escenas.some(e => e.clip) && !confirm("¿Quitar el movimiento? Se olvidan los clips IA de este vídeo.")) { ev.target.checked = true; return; }
+    await api(`/api/proyectos/${actual}/ajustes`, { method: "POST", body: JSON.stringify({ movimiento: ev.target.checked }) });
+    refrescar();
+  };
+  $("#simular").onchange = async ev => {
+    await api(`/api/proyectos/${actual}/ajustes`, { method: "POST", body: JSON.stringify({ simular: ev.target.checked }) });
+    refrescar();
+  };
+  document.querySelectorAll("[data-campo]").forEach(t => t.onchange = async () => {
+    const valor = t.type === "checkbox" ? t.checked : t.value;
+    try { await api(`/api/proyectos/${actual}/escena/${t.dataset.n}`, { method: "PATCH", body: JSON.stringify({ [t.dataset.campo]: valor }) }); }
+    catch (e) { alert(e.message); }
+    t.blur(); refrescar();
+  });
+  document.querySelectorAll("[data-rehacer]").forEach(b => b.onclick = () =>
+    b.dataset.rehacer === "clips" ? lanzarClips([+b.dataset.n])
+      : lanzar(b.dataset.rehacer, [+b.dataset.n], document.querySelector(`#nota${b.dataset.n}`).value));
+  document.querySelectorAll(".escena video").forEach(v => {
+    v.onmouseenter = () => v.play().catch(() => {});
+    v.onmouseleave = () => v.pause();
+  });
+  document.querySelectorAll("[data-copiar]").forEach(b => b.onclick = async () => {
+    await navigator.clipboard.writeText(datos.prompts[b.dataset.copiar]);
+    b.textContent = "✓ Copiado"; setTimeout(() => b.textContent = "Copiar prompt", 1500);
+  });
+  document.querySelectorAll("[data-subir]").forEach(b => b.onclick = () => { activa = +b.dataset.subir; $("#archivo").click(); });
+  document.querySelectorAll(".escena").forEach(c => c.onmouseenter = () => {
+    activa = +c.dataset.n;
+    document.querySelectorAll(".escena").forEach(x => x.classList.toggle("activa", x === c));
+  });
+}
+
+function tarjeta(e, ocupado) {
+  const media = e.clip ? `<video src="${archivo(e.clip)}" muted loop playsinline preload="metadata"></video><span class="clipia">clip IA ${(e.clip_s || 0).toFixed(1)} s</span>`
+    : e.imagen ? `<img src="${archivo(e.imagen)}">${e.continua ? `<span class="reusa">misma imagen que la anterior</span>` : ""}`
+    : `<span>${e.continua ? "usará la imagen de la anterior" : "sin imagen · pega una con Ctrl+V"}</span>`;
+  const dis = ocupado ? "disabled" : "";
+  return `<div class="escena ${activa === e.n ? "activa" : ""}" data-n="${e.n}">
+    <div class="cab"><b>Escena ${e.n}</b>
+      <span>${e.duracion ? e.duracion.toFixed(1) + " s" : ""}
+      ${e.audio ? `<a href="${archivo(e.audio)}" target="_blank">▶ voz</a>` : ""}</span></div>
+    <div class="media">${media}</div>
+    <label>Narración</label><textarea rows="3" data-campo="narracion" data-n="${e.n}" ${dis}>${esc(e.narracion)}</textarea>
+    <label>Qué se ve (inglés)</label><textarea rows="2" data-campo="visual" data-n="${e.n}" ${dis}>${esc(e.visual)}</textarea>
+    ${e.n > 1 ? `<label class="fila"><input type="checkbox" style="width:auto" data-campo="continua" data-n="${e.n}" ${e.continua ? "checked" : ""} ${dis}> Misma imagen que la anterior (otro movimiento)</label>` : ""}
+    <label class="fila"><input type="checkbox" style="width:auto" data-campo="video_ia" data-n="${e.n}" ${e.video_ia ? "checked" : ""} ${dis}> Vídeo IA (GPU)</label>
+    <input id="nota${e.n}" placeholder="nota para rehacer la imagen (opcional)" style="margin-top:6px" ${dis}>
+    <div class="botones">
+      <button data-copiar="${e.n}">Copiar prompt</button>
+      <button data-subir="${e.n}" ${dis}>Subir imagen</button>
+      ${e.continua ? "" : `<button data-rehacer="imagenes" data-n="${e.n}" ${dis}>Rehacer imagen</button>`}
+      <button data-rehacer="voz" data-n="${e.n}" ${dis}>Rehacer voz</button>
+      ${e.video_ia && e.imagen ? `<button data-rehacer="clips" data-n="${e.n}" ${dis}>${e.clip ? "Rehacer clip" : "Hacer clip"}</button>` : ""}
+    </div></div>`;
+}
+
+async function enviarImagen(n, blob) {
+  const url = await new Promise(ok => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(blob); });
+  try { await api(`/api/proyectos/${actual}/escena/${n}/imagen`, { method: "POST", body: JSON.stringify({ imagen: url }) }); }
+  catch (e) { alert(e.message); }
+  refrescar();
+}
+$("#archivo").onchange = ev => { const f = ev.target.files[0]; if (f && activa) enviarImagen(activa, f); ev.target.value = ""; };
+document.addEventListener("paste", ev => {
+  if (!actual || !activa || datos?.ocupado) return;
+  const item = [...ev.clipboardData.items].find(i => i.type.startsWith("image/"));
+  if (!item) return;
+  ev.preventDefault();
+  enviarImagen(activa, item.getAsFile());
+});
+
+function lanzarClips(solo = null) {
+  if (!config.gpu_conectada && !datos.simular) {
+    alert("La GPU de Kaggle no está conectada. Te abro el Asistente en el paso 5 para conectarla (gratis).");
+    return abrirAsistente(4);
+  }
+  if (!solo) {
+    const vi = datos.video_ia || {};
+    if (!vi.faltan) return alert("Marca «Vídeo IA (GPU)» en las escenas que quieras animar con IA (y que tengan imagen).");
+    if (!confirm(`Se mandan ${vi.faltan - (vi.sin_imagen || 0)} escenas a tu GPU de Kaggle (~${vi.horas} h de tus ${vi.horas_semana} h semanales). ¿Seguir?`)) return;
+  }
+  lanzar("clips", solo);
+}
+
+async function lanzar(paso, solo = null, nota = "") {
+  if ((paso === "imagenes" || paso === "todo") && config.motor_imagen === "kaggle" && !config.gpu_conectada && !datos.simular) {
+    alert("Las imágenes van en tu GPU de Kaggle, pero no está conectada. Te abro el Asistente en el paso 5 para conectarla (gratis), o cambia el motor de imágenes en Ajustes.");
+    return abrirAsistente(4);
+  }
+  try { await api(`/api/proyectos/${actual}/paso`, { method: "POST", body: JSON.stringify({ paso, solo, nota }) }); }
+  catch (e) { alert(e.message); }
+  refrescar();
+}
+
+
+// ------------------------------------------------------------- asistente
+let paso = 0, diag = null, gpuTimer = null;
+const PASOS_ASIS = ["bienvenida", "equipo", "guion", "imagenes", "gpu", "voz", "listo"];
+let paisAsis = null;
+$("#abrirAsistente").onclick = () => abrirAsistente();
+
+function abrirAsistente(inicio = 0) { paso = inicio; $("#velo").hidden = false; pintarAsistente(); }
+function cerrarAsistente() {
+  $("#velo").hidden = true; clearTimeout(gpuTimer);
+  guardarCfg({ asistente_hecho: true });
+}
+
+function opcion(nombre, valor, titulo, detalle, marcada, activa = true) {
+  return `<label class="opcion ${activa ? "" : "off"}"><input type="radio" name="${nombre}" value="${valor}" ${marcada ? "checked" : ""} ${activa ? "" : "disabled"}>
+    <span><b>${titulo}</b><small>${detalle}</small></span></label>`;
+}
+const chk = (ok, texto, malo) => `<div class="chequeo"><span class="${ok ? "bien" : "mal"}">${ok ? "✓" : "✗"}</span><span>${ok ? texto : malo}</span></div>`;
+
+async function pintarAsistente() {
+  const caja = $("#asistente"), nombre = PASOS_ASIS[paso];
+  let html = `<div class="paso-n">Paso ${paso + 1} de ${PASOS_ASIS.length}</div>`;
+  if (nombre === "bienvenida") {
+    html += `<h2>Bienvenido a Video Simple</h2>
+      <p>Escribes de qué va tu vídeo y la herramienta hace el resto: guion, voz, imágenes, animación y subtítulos. Un vídeo de 14 minutos sale solo en ~1 hora.</p>
+      <p><b>Todo es gratis.</b> No hace falta tarjeta. En 3 minutos lo dejamos listo.</p>`;
+  } else if (nombre === "equipo") {
+    html += `<h2>Comprobando tu equipo</h2><div id="diag"><p class="estado">Mirando…</p></div>`;
+  } else if (nombre === "guion") {
+    const c = diag?.claude, o = diag?.ollama && diag.ollama.length;
+    const elegido = config.motor_guion;
+    html += `<h2>¿Quién escribe el guion?</h2>
+      ${opcion("guion", "manual", "ChatGPT a mano (gratis, para todos)", "Copias un prompt, lo pegas en ChatGPT y pegas su respuesta. 1 minuto.", elegido === "manual" || (!c && elegido !== "ollama"))}
+      ${opcion("guion", "claude", "Claude, automático", c ? "Detectado en este PC: usa tu suscripción de Claude." : "No detectado (necesita el CLI de Claude con suscripción).", elegido === "claude" && c, c)}
+      ${opcion("guion", "ollama", "Ollama, automático y local", o ? `Detectado: ${diag.ollama.join(", ")}. Gratis, escribe peor.` : "No detectado (ollama.com, gratis).", elegido === "ollama" && o, o)}`;
+  } else if (nombre === "imagenes") {
+    const elegido = config.motor_imagen;
+    html += `<h2>¿De dónde salen las imágenes?</h2>
+      ${opcion("img", "pollinations", "Pollinations, automático (recomendado)", "Gratis y sin cuenta: 1 imagen cada 45 s. Un vídeo de 14 min ≈ 1 hora, solo.", elegido === "pollinations")}
+      ${opcion("img", "manual", "Las hago yo (ChatGPT, Gemini, Bing…)", "La herramienta te da el prompt de cada escena y pegas la imagen con Ctrl+V.", elegido === "manual")}
+      ${opcion("img", "kaggle", "GPU Kaggle (gratis, sin límite, mejor calidad)", `En tu GPU gratis de Kaggle, con FLUX.2: los personajes salen iguales en todo el vídeo. ${config.gpu_conectada ? "GPU conectada ✓" : "Se conecta en el paso siguiente (GPU gratis)."}`, elegido === "kaggle")}
+      <label>Clave de Pollinations (opcional: sin marca de agua y sin espera) · <a href="https://enter.pollinations.ai" target="_blank">enter.pollinations.ai</a></label>
+      <input id="asisToken" type="password" placeholder="${config.token_pollinations ? "clave guardada ✓" : "déjalo vacío si no tienes"}">`;
+  } else if (nombre === "gpu") {
+    html += `<h2>GPU gratis (opcional)</h2>
+      <p>Para los planos con <b>vídeo IA de verdad</b>, Kaggle regala <b>30 horas a la semana</b> de una GPU de 16 GB. Es tuya, con tu cuenta. Si no la quieres ahora, pulsa Saltar.</p>
+      <ol>
+        <li>Crea una cuenta en <a href="https://www.kaggle.com/account/login" target="_blank">kaggle.com</a>.</li>
+        <li>Verifica tu teléfono en <a href="https://www.kaggle.com/settings" target="_blank">Settings</a> → <i>Phone verification</i>. Sin esto Kaggle no da GPU.</li>
+        <li>En <a href="https://www.kaggle.com/settings/api" target="_blank">Settings → API</a> pulsa <b>Generate New Token</b> y copia el token.</li>
+        <li>Pega aquí tu usuario y el token:</li>
+      </ol>
+      <label>Usuario de Kaggle</label><input id="kUsuario" placeholder="tu_usuario">
+      <label>Token</label><input id="kToken" type="password" placeholder="${config.gpu_conectada ? "ya conectada ✓ (pega otro para cambiarla)" : "pega el token"}">
+      <div class="fila" style="margin-top:10px"><button class="primario" id="kConectar">Conectar</button>
+        <button id="kProbar" ${config.gpu_conectada ? "" : "disabled"}>Probar la GPU</button></div>
+      <p class="estado" id="kEstado">${config.gpu_conectada ? "Cuenta conectada." : ""}</p>`;
+  } else if (nombre === "voz") {
+    const actualVoz = voces.find(v => v.id === config.voz);
+    paisAsis = paisAsis || actualVoz?.pais || "Colombia";
+    const paises = [...new Set(voces.map(v => v.pais))];
+    html += `<h2>Elige la voz</h2>
+      <p>Pulsa ▶ para escucharla. Luego la puedes cambiar en cada vídeo, en el panel de la izquierda.</p>
+      <label>País</label><select id="asisPais">${paises.map(p => `<option ${p === paisAsis ? "selected" : ""}>${esc(p)}</option>`).join("")}</select>
+      <div class="voces-pais">${voces.filter(v => v.pais === paisAsis).map(v =>
+        `<label class="opcion"><input type="radio" name="vozA" value="${v.id}" ${v.id === config.voz ? "checked" : ""}>
+          <span><b>${esc(v.nombre)}</b><small>${esc(v.pais)}${v.genero ? " · " + v.genero : ""}</small></span>
+          <button type="button" class="oir" data-oir="${v.id}">▶ Escuchar</button></label>`).join("")}</div>`;
+  } else {
+    html += `<h2>¡Listo!</h2>
+      <p>Crea tu primer vídeo a la izquierda: título, de qué va, minutos y estilo. Luego pulsa <b>Hacer todo</b>.</p>
+      <p class="estado">Consejo: prueba primero con 1 minuto para ver el estilo, y después ve a por los 14.</p>`;
+  }
+  html += `<div class="navegar">
+      <button id="asisAtras" ${paso === 0 ? "disabled" : ""}>Atrás</button>
+      <div class="fila">${nombre === "gpu" ? `<button id="asisSaltar">Saltar</button>` : ""}
+      <button class="primario" id="asisSig">${paso === PASOS_ASIS.length - 1 ? "Empezar" : "Siguiente"}</button></div></div>`;
+  caja.innerHTML = html;
+
+  $("#asisAtras").onclick = () => { paso--; pintarAsistente(); };
+  if ($("#asisSaltar")) $("#asisSaltar").onclick = () => { paso++; pintarAsistente(); };
+  $("#asisSig").onclick = async () => {
+    if (nombre === "guion") {
+      const v = document.querySelector('input[name="guion"]:checked');
+      if (v) await guardarCfg({ motor_guion: v.value });
+    }
+    if (nombre === "imagenes") {
+      const v = document.querySelector('input[name="img"]:checked');
+      const cambio = v ? { motor_imagen: v.value } : {};
+      if ($("#asisToken").value.trim()) cambio.token_pollinations = $("#asisToken").value.trim();
+      await guardarCfg(cambio);
+    }
+    if (nombre === "voz") {
+      const v = document.querySelector('input[name="vozA"]:checked');
+      if (v) { await guardarCfg({ voz: v.value }); const s = $("#nVozCaja select"); if (s) s.value = v.value; }
+    }
+    if (paso === PASOS_ASIS.length - 1) return cerrarAsistente();
+    paso++; pintarAsistente();
+  };
+
+  if (nombre === "voz") {
+    $("#asisPais").onchange = ev => { paisAsis = ev.target.value; pintarAsistente(); };
+    caja.querySelectorAll("[data-oir]").forEach(b => b.onclick = ev => { ev.preventDefault(); oir(b.dataset.oir, b); });
+  }
+  if (nombre === "equipo") {
+    diag = diag || await api("/api/diagnostico").catch(() => ({}));
+    $("#diag").innerHTML =
+      chk(diag.ffmpeg, "Motor de vídeo (ffmpeg) incluido", "Falta ffmpeg") +
+      chk(diag.voz, "Voces en español funcionando", "La voz no responde: revisa tu conexión") +
+      chk(diag.internet, "Conexión con el generador de imágenes", "Sin conexión con Pollinations") +
+      chk(diag.claude, "Claude detectado (guion automático)", "Claude no está: el guion lo harás con ChatGPT (gratis)") +
+      chk(diag.ollama && diag.ollama.length, "Ollama detectado", "Ollama no está (opcional)");
+  }
+  if (nombre === "gpu") {
+    $("#kConectar").onclick = async () => {
+      $("#kEstado").textContent = "Comprobando con Kaggle…";
+      try {
+        await api("/api/gpu/conectar", { method: "POST", body: JSON.stringify({ usuario: $("#kUsuario").value, token: $("#kToken").value }) });
+        config.gpu_conectada = true;
+        $("#kEstado").textContent = "✓ Cuenta conectada. Ahora pulsa Probar la GPU.";
+        $("#kProbar").disabled = false;
+      } catch (e) { $("#kEstado").textContent = "✗ " + e.message; }
+    };
+    $("#kProbar").onclick = async () => {
+      try { await api("/api/gpu/probar", { method: "POST" }); } catch (e) { $("#kEstado").textContent = "✗ " + e.message; return; }
+      const mirar = async () => {
+        const e = await api("/api/gpu/estado");
+        $("#kEstado").textContent = (e.fase === "ok" ? "✓ " : e.fase === "probando" ? "⏳ " : "✗ ") + e.detalle;
+        if (e.fase === "probando") gpuTimer = setTimeout(mirar, 4000);
+      };
+      mirar();
+    };
+  }
+}
+
+// ---------------------------------------------------------------- el ojito
+// Todo campo de contrasena o clave lleva un ojo para ver lo escrito. Se pone
+// solo, tambien en lo que se pinta despues (asistente, acceso), observando el DOM.
+function ponerOjos() {
+  document.querySelectorAll('input[type="password"]:not([data-ojo])').forEach(campo => {
+    campo.dataset.ojo = "1";
+    const caja = document.createElement("span");
+    caja.className = "con-ojo";
+    campo.replaceWith(caja);
+    caja.appendChild(campo);
+    const ojo = document.createElement("button");
+    ojo.type = "button"; ojo.className = "ojo"; ojo.textContent = "👁"; ojo.title = "Ver";
+    ojo.onclick = () => {
+      const ver = campo.type === "password";
+      campo.type = ver ? "text" : "password";
+      ojo.textContent = ver ? "🙈" : "👁"; ojo.title = ver ? "Ocultar" : "Ver";
+      campo.focus();
+    };
+    caja.appendChild(ojo);
+  });
+}
+new MutationObserver(ponerOjos).observe(document.body, { childList: true, subtree: true });
+ponerOjos();
+
+// ---------------------------------------------------------------- cuentas
+let sesion = { usuario: null, hay_usuarios: false };
+
+function mostrarAcceso(modo) {
+  modo = modo || (sesion.hay_usuarios ? "entrar" : "registro");
+  $("#velo").hidden = false;
+  $("#asistente").innerHTML = `<div class="acceso">
+    <h2>${modo === "entrar" ? "Entra en tu cuenta" : "Crea tu cuenta"}</h2>
+    <p class="estado">Tus vídeos y tus claves (Kaggle, Pollinations) son solo tuyos.</p>
+    <div class="pestanas"><button data-modo="entrar" class="${modo === "entrar" ? "activa" : ""}">Entrar</button>
+      <button data-modo="registro" class="${modo === "registro" ? "activa" : ""}">Crear cuenta</button></div>
+    <label>Usuario</label><input id="aUsuario" autocomplete="username">
+    <label>Contraseña ${modo === "registro" ? "(mínimo 8 caracteres)" : ""}</label>
+    <input id="aClave" type="password" autocomplete="${modo === "entrar" ? "current-password" : "new-password"}">
+    <div class="error" id="aError"></div>
+    <div class="navegar"><button id="aCerrar">Cancelar</button>
+      <button class="primario" id="aEnviar">${modo === "entrar" ? "Entrar" : "Crear cuenta"}</button></div></div>`;
+  document.querySelectorAll("[data-modo]").forEach(b => b.onclick = () => mostrarAcceso(b.dataset.modo));
+  $("#aCerrar").onclick = () => { $("#velo").hidden = true; };
+  const enviar = async () => {
+    try {
+      await api(modo === "entrar" ? "/api/entrar" : "/api/registro",
+        { method: "POST", body: JSON.stringify({ usuario: $("#aUsuario").value, clave: $("#aClave").value }) });
+      location.reload();
+    } catch (e) { $("#aError").textContent = e.message; }
+  };
+  $("#aEnviar").onclick = enviar;
+  $("#aClave").onkeydown = ev => { if (ev.key === "Enter") enviar(); };
+  $("#aUsuario").focus();
+}
+$("#entrar").onclick = () => mostrarAcceso();
+$("#salir").onclick = async () => { await api("/api/salir", { method: "POST" }); location.hash = ""; location.reload(); };
+
+(async () => {
+  sesion = await api("/api/sesion");
+  if (!sesion.usuario) { abrir(""); return; }          // fuera: solo la portada con el ejemplo
+  document.body.classList.remove("fuera");
+  $("#quien").textContent = "👤 " + sesion.usuario;
+  await cargarConfig();
+  if (!config.asistente_hecho) abrirAsistente();
+  cargarLista();
+  abrir(location.hash.slice(1));                        // sin video abierto: el tablero
+})();
+</script>
+</body>
+</html>

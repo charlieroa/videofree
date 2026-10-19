@@ -1,0 +1,138 @@
+{
+  "_nota": "Todo gratis: guion con el CLI de Claude (tu suscripcion) u Ollama local, voz con edge-tts, imagenes con Pollinations o pegadas a mano (ChatGPT), y la animacion la hace ffmpeg en tu PC.",
+  "guion": {
+    "motor": "manual",
+    "modelo_claude": "sonnet",
+    "modelo_ollama": "llama3.2",
+    "palabras_por_minuto": 125,
+    "segundos_por_escena": 7
+  },
+  "voz": {
+    "voz": "es-CO-GonzaloNeural",
+    "velocidad": "+0%"
+  },
+  "imagen": {
+    "motor": "pollinations",
+    "modelo": "flux",
+    "ancho": 1536,
+    "alto": 864,
+    "semilla": 1234,
+    "espera_s": 46
+  },
+  "montaje": {
+    "ancho": 1920,
+    "alto": 1080,
+    "fps": 25,
+    "zoom": 0.16,
+    "subtitulos": true,
+    "musica": "",
+    "volumen_musica": 0.12
+  },
+  "video_gpu": {
+    "_nota": "Clips de video IA en la GPU gratis de Kaggle. Modelo: LTX-Video 2B distilled (Lightricks). Ver README.",
+    "modelo": {
+      "repo_base": "Lightricks/LTX-Video-0.9.5",
+      "checkpoint": "https://huggingface.co/Lightricks/LTX-Video/blob/main/ltxv-2b-0.9.6-distilled-04-25.safetensors",
+      "pasos": 8,
+      "guia": 1.0,
+      "timesteps": null
+    },
+    "plan_b": {
+      "repo_base": "Lightricks/LTX-Video-0.9.5",
+      "checkpoint": "",
+      "pasos": 30,
+      "guia": 3.0,
+      "timesteps": null
+    },
+    "precision": "auto",
+    "ancho": 832,
+    "alto": 480,
+    "fps": 24,
+    "tope_s": 5,
+    "max_escenas_por_tanda": 30,
+    "machine_shape": "NvidiaTeslaT4",
+    "gpus_max": 2,
+    "semilla": 1234,
+    "pip": [
+      "diffusers==0.35.2",
+      "transformers==4.57.1",
+      "accelerate",
+      "sentencepiece",
+      "imageio",
+      "imageio-ffmpeg"
+    ],
+    "min_por_clip_estimado": 1.5,
+    "min_arranque_estimado": 12,
+    "horas_semana_kaggle": 30,
+    "medido": {
+      "min_por_clip": 0.49,
+      "min_arranque": 5.0,
+      "gpu": "Tesla T4, Tesla T4",
+      "dtype": "float16",
+      "fecha": "2026-10-19 12:31"
+    }
+  },
+  "asistente_hecho": false,
+  "imagen_gpu": {
+    "_nota": "Imagenes en la GPU gratis de Kaggle (imagen.motor = 'kaggle'). Modelo: FLUX.2 [klein] 4B (Apache 2.0) con hoja de personajes como referencia. plan_b (Z-Image-Turbo) no se usa solo: para probarlo, copialo en 'modelo'. Ver README.",
+    "modelo": {
+      "familia": "flux2_klein",
+      "repo": "black-forest-labs/FLUX.2-klein-4B",
+      "pasos": 4,
+      "guia": 1.0
+    },
+    "plan_b": {
+      "familia": "zimage",
+      "repo": "Tongyi-MAI/Z-Image-Turbo",
+      "pasos": 9,
+      "guia": 0.0
+    },
+    "precision": "auto",
+    "ancho": 1344,
+    "alto": 768,
+    "semilla": 1234,
+    "referencias": true,
+    "ref_lado": 1024,
+    "max_por_tanda": 40,
+    "machine_shape": "NvidiaTeslaT4",
+    "gpus_max": 2,
+    "pip": [
+      "diffusers==0.39.0",
+      "transformers==4.57.1",
+      "accelerate"
+    ],
+    "min_por_imagen_estimado": 0.3,
+    "min_arranque_estimado": 5,
+    "medido": {
+      "min_por_imagen": 0.29,
+      "min_arranque": 4.0,
+      "gpu": "Tesla T4, Tesla T4",
+      "dtype": "float16",
+      "fecha": "2026-10-19 12:06"
+    }
+  },
+  "voz_gpu": {
+    "_nota": "Voz natural en la GPU gratis de Kaggle: Chatterbox Multilingual (Resemble AI, licencia MIT). Ids de voz: chatterbox:base y chatterbox:clon (muestra de la persona en secretos/<usuario>_voz.mp3).",
+    "machine_shape": "NvidiaTeslaT4",
+    "emocion": 0.5,
+    "cfg": 0.5,
+    "temperatura": 0.8,
+    "semilla": 1234,
+    "pip_ligero": [
+      "conformer==0.3.2",
+      "s3tokenizer",
+      "resemble-perth",
+      "pykakasi==2.3.0",
+      "spacy-pkuseg",
+      "pyloudnorm",
+      "omegaconf",
+      "librosa",
+      "diffusers",
+      "einops",
+      "onnx"
+    ],
+    "pip_completo": [
+      "chatterbox-tts==0.1.7"
+    ]
+  }
+}
