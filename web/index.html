@@ -186,7 +186,7 @@
 <header>
   <h1><a href="#"><span class="logo">▶</span> Video Simple</a></h1><span class="gratis">0 $ por vídeo</span>
   <div class="derecha">
-    <span class="quien solo-dentro" id="quien"></span>
+    <span class="quien solo-dentro" id="quien"></span><select id="cambiarUsuario" class="solo-dentro" title="Cambiar de usuario" hidden></select>
     <button id="abrirCanal" class="solo-dentro" title="Foto de perfil y banner con las medidas de YouTube">📺 Mi canal</button><button id="abrirAsistente" class="solo-dentro">Asistente</button><button id="abrirAjustes" class="solo-dentro">Ajustes</button>
     <button id="salir" class="solo-dentro">Salir</button>
     <button id="entrar" class="primario solo-fuera">Entrar</button>
@@ -911,7 +911,9 @@ new MutationObserver(ponerOjos).observe(document.body, { childList: true, subtre
 ponerOjos();
 
 // ---------------------------------------------------------------- cuentas
-let sesion = { usuario: null, hay_usuarios: false };
+// Desde este mismo PC se entra sin cuenta (sesion.local); el login solo se pide
+// si alguien abre la app desde otra maquina.
+let sesion = { usuario: null, hay_usuarios: false, local: false, usuarios: [] };
 
 function mostrarAcceso(modo) {
   modo = modo || (sesion.hay_usuarios ? "entrar" : "registro");
@@ -948,6 +950,15 @@ $("#salir").onclick = async () => { await api("/api/salir", { method: "POST" });
   if (!sesion.usuario) { abrir(""); return; }          // fuera: solo la portada con el ejemplo
   document.body.classList.remove("fuera");
   $("#quien").textContent = "👤 " + sesion.usuario;
+  if (sesion.local) {
+    $("#salir").hidden = true;                          // en local no hay de donde salir
+    if (sesion.usuarios.length > 1) {                   // varios usuarios: se cambia sin contraseña
+      const sel = $("#cambiarUsuario");
+      sel.innerHTML = sesion.usuarios.map(u => `<option ${u === sesion.usuario ? "selected" : ""}>${u}</option>`).join("");
+      sel.hidden = false; $("#quien").hidden = true;
+      sel.onchange = async () => { await api("/api/usar", { method: "POST", body: JSON.stringify({ usuario: sel.value }) }); location.hash = ""; location.reload(); };
+    }
+  }
   await cargarConfig();
   if (!config.asistente_hecho) abrirAsistente();
   cargarLista();

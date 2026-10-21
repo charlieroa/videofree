@@ -50,7 +50,12 @@ class Sesion:
             except Exception:
                 pass
             token = galleta[usuarios.COOKIE].value if usuarios.COOKIE in galleta else None
-            usuarios.ACTUAL.set(usuarios.de_sesion(token))
+            nombre = usuarios.de_sesion(token)
+            local = usuarios.es_local(scope)
+            if not nombre and local:              # desde este PC se entra sin cuenta
+                nombre = usuarios.por_defecto()
+            scope.setdefault("state", {})["local"] = local
+            usuarios.ACTUAL.set(nombre)
         await self.siguiente(scope, receive, send)
 
 
@@ -257,9 +262,30 @@ def inicio():
     return FileResponse(WEB / "index.html")
 
 
+def _es_local(peticion):
+    return bool(peticion.scope.get("state", {}).get("local"))
+
+
 @app.get("/api/sesion")
-def sesion():
-    return {"usuario": usuarios.ACTUAL.get(), "hay_usuarios": usuarios.hay_usuarios()}
+def sesion(peticion: Request):
+    local = _es_local(peticion)
+    return {"usuario": usuarios.ACTUAL.get(), "hay_usuarios": usuarios.hay_usuarios(),
+            "local": local, "usuarios": usuarios.nombres() if local else []}
+
+
+class Cambio(BaseModel):
+    usuario: str
+
+
+@app.post("/api/usar")
+def usar(c: Cambio, peticion: Request, respuesta: Response):
+    """Cambiar de usuario sin contrasena: solo desde este mismo PC."""
+    if not _es_local(peticion):
+        raise HTTPException(403, "Desde otra máquina hay que entrar con contraseña.")
+    nombre = (c.usuario or "").strip().lower()
+    if nombre not in usuarios.nombres():
+        raise HTTPException(404, "No existe ese usuario.")
+    return _con_sesion(respuesta, nombre)
 
 
 def _con_sesion(respuesta, nombre):
@@ -694,4 +720,7 @@ if __name__ == "__main__":
     ap.add_argument("--puerto", type=int, default=8031)
     ap.add_argument("--host", default="127.0.0.1")
     a = ap.parse_args()
+    if a.host not in ("127.0.0.1", "localhost", "::1"):
+        print(f"Aviso: escuchando en {a.host}. Desde este PC se entra sin cuenta; "
+              "desde otras maquinas se pide usuario y contraseña.")
     uvicorn.run(app, host=a.host, port=a.puerto)

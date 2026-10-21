@@ -10,8 +10,16 @@ ACTUAL es el usuario de la peticion o del trabajo en curso. Lo pone el
 middleware de app.py en cada peticion y _correr en cada hilo de trabajo; de el
 dependen los secretos (proyecto.secretos) y la GPU (gpu.credenciales), que son
 de cada persona.
+
+Modo local (el normal): quien abre la app desde el mismo PC entra sin cuenta.
+Si no hay usuarios se crea uno llamado "local" sin contrasena; si hay uno, se
+entra con ese; si hay varios, con el mas antiguo, y la pantalla deja cambiar de
+uno a otro sin contrasena. Las peticiones que llegan de otra maquina (si alguien
+arranca con --host 0.0.0.0) siguen pidiendo usuario y contrasena.
 """
 import contextvars
+import ipaddress
+import os
 import hashlib
 import hmac
 import json
@@ -86,7 +94,7 @@ def cambiar_clave(nombre, clave):
 def comprobar(nombre, clave):
     nombre = (nombre or "").strip().lower()
     u = _leer(USUARIOS).get(nombre)
-    if not u:
+    if not u or not u.get("hash"):               # "local" no tiene contrasena: no se entra con una
         _hash(clave or "", "00" * 16)            # mismo tiempo exista o no el usuario
         return None
     return nombre if hmac.compare_digest(u["hash"], _hash(clave or "", u["sal"])) else None
@@ -117,3 +125,40 @@ def de_sesion(token):
     if not v or v["caduca"] < time.time():
         return None
     return v["usuario"] if v["usuario"] in _leer(USUARIOS) else None
+
+
+USUARIO_LOCAL = "local"
+SIN_LOGIN = os.environ.get("VIDEOFREE_SIN_LOGIN", "1") != "0"
+
+
+def nombres():
+    """Los usuarios, del mas antiguo al mas nuevo."""
+    todos = _leer(USUARIOS)
+    return sorted(todos, key=lambda n: (todos[n].get("creado", ""), n))
+
+
+def es_local(scope):
+    """La peticion viene de este mismo PC y no pasa por un proxy."""
+    if not SIN_LOGIN:
+        return False
+    cabeceras = dict(scope.get("headers") or [])
+    if b"x-forwarded-for" in cabeceras or b"forwarded" in cabeceras:
+        return False
+    cliente = (scope.get("client") or ("", 0))[0]
+    try:
+        return ipaddress.ip_address(cliente).is_loopback
+    except ValueError:
+        return cliente == "testclient"          # el TestClient de FastAPI
+
+
+def por_defecto():
+    """Con quien se entra sin cuenta: el mas antiguo, o "local" recien creado."""
+    lista = nombres()
+    if lista:
+        return lista[0]
+    with _cerrojo:
+        todos = _leer(USUARIOS)
+        if not todos:                            # sin contrasena: solo se entra desde este PC
+            todos[USUARIO_LOCAL] = {"sal": "", "hash": "", "creado": time.strftime("%Y-%m-%d %H:%M:%S")}
+            _escribir(USUARIOS, todos)
+        return sorted(todos)[0] if USUARIO_LOCAL not in todos else USUARIO_LOCAL

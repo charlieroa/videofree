@@ -42,10 +42,10 @@ iniciar.bat
 La primera vez tarda 1–2 minutos porque instala lo necesario. Después se abre solo
 **http://127.0.0.1:8031/** en tu navegador. Las siguientes veces basta con doble clic en `iniciar.bat`.
 
-### 3. Crear tu usuario y seguir el asistente
+### 3. Seguir el asistente
 
-Al entrar, pulsa **Crear cuenta** (usuario y contraseña de mínimo 8 caracteres; se guarda
-solo en tu PC). Después se abre el **asistente** de 7 pasos (cada usuario nuevo lo ve al entrar):
+No hace falta crear cuenta: la app entra directo con un usuario local de tu PC, y tus
+claves y tus vídeos se guardan con él. Al abrirla por primera vez se abre el **asistente** de 7 pasos:
 
 1. **Bienvenida.**
 2. **Equipo**: comprueba solo que todo esté instalado.

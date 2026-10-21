@@ -227,6 +227,14 @@ Con las dos GPU, un vídeo de 14 min (~85 imágenes) son unos 4 min de arranque 
 imágenes: ~16 min de las 30 h semanales. Configuración en `imagen_gpu`: modelo, pasos, guía,
 tamaño (múltiplos de 16), semilla, `referencias`, `max_por_tanda`, `machine_shape`, pip.
 
+## Usuarios (sin login)
+
+Desde el mismo PC se entra sin cuenta. Con 0 usuarios se crea `local` (sin contraseña); con
+uno, se entra con ese; con varios, con el más antiguo, y arriba sale un selector para cambiar
+sin contraseña. Las peticiones de otra máquina (si arrancas con `--host 0.0.0.0`) o que
+llegan por un proxy siguen pidiendo usuario y contraseña. `VIDEOFREE_SIN_LOGIN=0` vuelve a
+pedir login siempre.
+
 ## Claves
 
 Las claves (Pollinations, Kaggle) se guardan en `secretos/<usuario>.json`, que está en

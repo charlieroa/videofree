@@ -59,7 +59,7 @@ Comprueba que responde: `curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1
 ## 5. Acompañar el asistente
 
 Explícale que en la pantalla tiene que:
-1. Pulsar **Crear cuenta** (usuario y contraseña de mínimo 8 caracteres, solo en su PC).
+1. Nada de cuenta ni contraseña: la app entra directo con un usuario local de su PC.
 2. Seguir el asistente. Para el guion, si no tiene la CLI de Claude ni Ollama, que elija
    **ChatGPT (a mano)**.
 3. **Kaggle**, para tener GPU gratis:
