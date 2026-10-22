@@ -290,12 +290,13 @@ def _con_ia(datos, e, destino, avisar, nota, hoja, motor):
 def motor_efectivo(datos=None):
     """El motor que de verdad se usa. Con «gemini» (el de serie): OpenAI si hay su
     clave (la capa gratis de Gemini no da imagenes), si no Cloudflare (gratis cada
-    dia), si no Gemini con su clave, y sin nada Puter (gratis, en el navegador)."""
+    dia), si no Gemini con su clave, y sin nada Pollinations. Puter solo si se
+    elige a mano (su saldo gratis da para pocas imagenes)."""
     if datos and datos.get("simular"):
         return "prueba"
     motor = proyecto.config()["imagen"]["motor"]
     if motor == "cloudflare":
-        return "cloudflare" if cloudflare_img.hay_clave() else "puter"
+        return "cloudflare" if cloudflare_img.hay_clave() else "pollinations"
     if motor in ("gemini", "openai"):
         if openai_img.hay_clave():
             return "openai"
@@ -303,7 +304,7 @@ def motor_efectivo(datos=None):
             return "cloudflare"
         if motor == "gemini" and gemini.hay_clave():
             return "gemini"
-        return "puter"
+        return "pollinations"
     return motor
 
 

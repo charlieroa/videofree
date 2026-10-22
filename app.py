@@ -359,7 +359,7 @@ def guardar_config(a: Ajustes):
         cfg["voz"]["voz"] = _voz_valida(a.voz)
     if a.motor_imagen in ("gemini", "openai", "cloudflare", "puter", "pollinations", "manual"):
         cfg["imagen"]["motor"] = a.motor_imagen
-    if a.motor_guion in ("gemini", "openai", "puter", "claude", "ollama", "manual"):
+    if a.motor_guion in ("gemini", "openai", "pollinations", "puter", "claude", "ollama", "manual"):
         cfg["guion"]["motor"] = a.motor_guion
     if a.token_pollinations is not None:
         proyecto.guardar_secreto("pollinations_token", a.token_pollinations.strip())
@@ -508,6 +508,20 @@ def respuesta_navegador(pid: str, r: RespuestaNavegador):
 
 class AudioEscena(BaseModel):
     audio: str              # data URL del audio que hizo el navegador con Puter
+
+
+class SinSaldo(BaseModel):
+    motivo: str = ""
+
+
+@app.post("/api/proyectos/{pid}/voz_sin_saldo")
+def voz_sin_saldo(pid: str, s: SinSaldo):
+    """La pestaña avisa que Puter no tiene saldo para narrar: el paso de voz pasa a Jorge."""
+    datos = _mio(pid)
+    if not datos.get("voz_navegador") or not _ocupado(pid):
+        raise HTTPException(409, "Este vídeo no está esperando voz del navegador.")
+    voz.puter_sin_saldo(pid, s.motivo)
+    return {"ok": True}
 
 
 @app.post("/api/proyectos/{pid}/escena/{n}/audio")

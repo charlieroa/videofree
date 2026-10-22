@@ -93,6 +93,12 @@ def _silencio(texto, destino):
 
 
 ESPERA_MAX_S = 15 * 60          # sin ninguna escena nueva en este tiempo, se corta
+ESPERA_PRIMERA_S = 3 * 60       # sin la primera escena en este tiempo, se narra con Jorge
+SIN_SALDO = {}                  # pid -> motivo: la pestaña avisa que Puter no tiene saldo
+
+
+def puter_sin_saldo(pid, motivo):
+    SIN_SALDO[pid] = motivo or "sin saldo"
 
 
 def _esperar_navegador(datos, elegida, avisar, solo):
@@ -101,6 +107,7 @@ def _esperar_navegador(datos, elegida, avisar, solo):
         for e in datos["escenas"]:
             if e["n"] in solo:
                 e["audio"], e["duracion"] = None, None
+    SIN_SALDO.pop(datos["id"], None)
     datos["voz_navegador"] = elegida
     proyecto.guardar(datos)
     nombre = elegida.split(":", 1)[1]
@@ -116,6 +123,11 @@ def _esperar_navegador(datos, elegida, avisar, solo):
                 hechas, ultimo = listas, time.time()
             if not faltan:
                 break
+            if datos["id"] in SIN_SALDO:
+                break
+            if hechas == 0 and time.time() - ultimo > ESPERA_PRIMERA_S:
+                SIN_SALDO[datos["id"]] = "nadie conectó Puter"     # no se queda parado: Jorge
+                break
             if time.time() - ultimo > ESPERA_MAX_S:
                 raise RuntimeError(f"El navegador no ha narrado ninguna escena en {ESPERA_MAX_S // 60} "
                                    f"min. Abre el vídeo, conecta Puter y vuelve a pulsar «2 · Voz», "
@@ -128,6 +140,16 @@ def _esperar_navegador(datos, elegida, avisar, solo):
         datos["voz_navegador"] = None
         proyecto.guardar(datos)
     datos["mp4"] = None
+    if SIN_SALDO.pop(datos["id"], None):
+        # Sin saldo en Puter: TODO el video con Jorge (no se mezclan dos voces en un video).
+        avisar(f"Puter no ha narrado (sin saldo o sin conectar): narro todo el vídeo con Jorge (gratis). "
+               f"Para usar {nombre} gratis de verdad, pega tu clave de Gemini en el Asistente.")
+        for e in datos["escenas"]:
+            e["audio"], e["duracion"] = None, None
+        datos["voz"] = JORGE
+        proyecto.guardar(datos)
+        ejecutar(datos, avisar)
+        return
     total = sum(e["duracion"] or 0 for e in datos["escenas"])
     avisar(f"Voz lista: {total / 60:.1f} min de narracion (Puter).")
 

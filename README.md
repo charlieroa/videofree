@@ -74,10 +74,11 @@ Pulsa **+ Crear vídeo**: un asistente de 5 pasos te lleva de la mano.
 4. **La voz**: escúchalas y elige.
 5. **Todo listo**: te dice qué IA hará cada cosa. Si es Puter, pulsa **Conectar Puter** y **Crear vídeo**.
 
-**Sin ninguna clave, gratis con Puter.** El guion, las imágenes (Gemini) y las voces Puck,
-Charon y Kore salen de tu cuenta gratis de [Puter](https://puter.com): lo hace tu navegador,
-así que deja abierta la pestaña del vídeo mientras trabaja. Si se acaban los créditos de
-Puter, las imágenes siguen con Pollinations y puedes cambiar a una voz gratis.
+**Sin ninguna clave también funciona, gratis:** el guion lo escribe Pollinations (sin cuenta),
+las imágenes salen de Pollinations y la voz de una de las gratis. Para mejor calidad, gratis:
+**clave de Gemini** (guion y voces Puck, Charon y Kore) + **Cloudflare** (imágenes). Puter queda
+como opción en Ajustes: su saldo gratis es pequeño y, cuando se acaba, la app no lo vuelve a
+intentar (Puck sin saldo → el vídeo se narra entero con Jorge).
 
 **Imágenes gratis de calidad cada día: Cloudflare.** En el Asistente (paso 2) elige
 **Cloudflare**: con una cuenta gratis (sin tarjeta) y un token de Workers AI salen unas 55-90

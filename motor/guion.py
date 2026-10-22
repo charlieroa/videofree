@@ -18,6 +18,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 
 import requests
 
@@ -100,6 +101,40 @@ def _claude(prompt, modelo):
     if sobre.get("is_error"):
         raise ErrorGuion(f"Claude fallo: {sobre.get('result', '')[:500]}")
     return sobre.get("result", "")
+
+
+def _pollinations(prompt, avisar):
+    """Texto GRATIS y sin cuenta: la API publica de Pollinations (modelo de serie, gpt-oss)."""
+    for intento in range(4):
+        try:
+            r = requests.post("https://text.pollinations.ai/openai", timeout=600,
+                              # Medido: sin reasoning_effort bajo, el modelo gratis (gpt-oss) se
+                              # gasta su limite de tokens pensando y devuelve el texto vacio.
+                              json={"model": "openai", "reasoning_effort": "low", "max_tokens": 16000,
+                                    "messages": [{"role": "user", "content": prompt}]})
+        except requests.RequestException as err:
+            if intento == 3:
+                raise ErrorGuion(f"Sin conexión con Pollinations: {err}")
+            time.sleep(10 * (intento + 1))
+            continue
+        if r.status_code == 200:
+            try:
+                texto = r.json()["choices"][0]["message"]["content"] or ""
+            except (ValueError, KeyError, IndexError):
+                texto = ""
+            if texto.strip():
+                return texto
+            if intento < 3:
+                if avisar:
+                    avisar("Pollinations devolvió el guion vacío; reintento")
+                continue
+            raise ErrorGuion("Pollinations no ha devuelto texto.")
+        if intento < 3:
+            if avisar:
+                avisar(f"Pollinations pide esperar ({r.status_code}); reintento")
+            time.sleep(15 * (intento + 1))
+            continue
+        raise ErrorGuion(f"Pollinations ({r.status_code}): {r.text[:300]}")
 
 
 def _ollama(prompt, modelo):
@@ -222,14 +257,15 @@ def _por_capitulos(datos, cfg, llamar, nombre, avisar):
 
 def motor_efectivo(datos=None):
     """El motor que de verdad se usa: Gemini sin clave pasa a OpenAI si hay su clave,
-    y si no, a Puter (gratis, en el navegador). OpenAI sin clave, a Puter."""
+    y si no, a Pollinations (gratis, sin cuenta). Puter solo si se elige a mano:
+    su saldo gratis es pequeño y se acaba."""
     if datos and datos.get("simular"):
         return "prueba"
     motor = proyecto.config()["guion"]["motor"]
     if motor == "gemini" and not gemini.hay_clave():
-        return "openai" if openai_img.hay_clave() else "puter"
+        return "openai" if openai_img.hay_clave() else "pollinations"
     if motor == "openai" and not openai_img.hay_clave():
-        return "puter"
+        return "pollinations"
     return motor
 
 
@@ -265,6 +301,9 @@ def ejecutar(datos, avisar):
             extra = NOTA_REFERENCIA if ref else ""
             llamar = lambda p: _extraer_json(openai_img.texto(extra + p, avisar,
                                                               imagenes=[ref] if ref else []))
+        elif motor == "pollinations":
+            nombre = "Pollinations (gratis)"
+            llamar = lambda p: _extraer_json(_pollinations(p, avisar))
         elif motor == "puter":
             nombre = "Puter (Gemini, en tu navegador)"
             ref = imagenes.referencia(datos)

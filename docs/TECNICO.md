@@ -122,10 +122,22 @@ Plan gratis: 10.000 neuronas/día (00:00 UTC). klein 4B = 26,05 por trozo de 512
 `ErrorCuota` → Pollinations. Si hay clave de OpenAI se prefiere OpenAI; si no, Cloudflare va
 antes que Gemini (sin facturación, Gemini no da imágenes) y que Puter.
 
-## Guion e imágenes sin clave (Puter)
+## Guion gratis sin clave (Pollinations)
 
-Sin clave de Gemini ni de OpenAI, `guion.motor_efectivo()` e `imagenes.motor_efectivo()`
-devuelven `puter`. El servidor no puede llamar a Puter, así que `motor/navegador.py` deja un
+Sin clave de Gemini ni de OpenAI, el guion va a `https://text.pollinations.ai/openai` (gratis,
+sin cuenta; modelo gpt-oss). **Con `reasoning_effort: "low"` y `max_tokens` alto**: sin eso se
+gasta su límite de 1.500 tokens pensando y devuelve el texto vacío (medido 22-10-2026). Un guion
+de 3 min (26 escenas) tarda ~1 min. Comparte el cupo por IP con las imágenes de Pollinations
+(un 402 = esperar y reintentar).
+
+## Guion e imágenes con Puter (opcional)
+
+Puter ya no es el de serie (su saldo gratis da para un vídeo corto). Se usa si se elige en
+Ajustes (`puter`). Antes de cada llamada la pestaña mira el saldo con
+`puter.auth.getMonthlyUsage().allowanceInfo.remaining` (microcentavos): por debajo del mínimo no
+llama, así Puter no saca su aviso de «Low Balance»; contesta «sin créditos» y la app sigue sin
+él (imágenes → Pollinations; voz → `voz_sin_saldo` → todo el vídeo con Jorge; también si en 3 min
+nadie conecta Puter). El servidor no puede llamar a Puter, así que `motor/navegador.py` deja un
 **pedido** en memoria (uno por vídeo) y bloquea el paso; `GET /api/proyectos/<id>` lo da como
 `pedido_navegador`, la pestaña llama a Puter y contesta en `POST /api/proyectos/<id>/navegador`.
 

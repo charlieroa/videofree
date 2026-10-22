@@ -124,6 +124,11 @@
   .progreso .barra { height: 5px; background: var(--borde); border-radius: 3px; margin-top: 6px; overflow: hidden; }
   .progreso .barra i { display: block; height: 100%; background: var(--acento); transition: width .4s; }
   .progreso .etapa.hecho .barra i { background: var(--ok); }
+  .girando { display: inline-block; width: 11px; height: 11px; border: 2px solid var(--acento); border-right-color: transparent;
+             border-radius: 50%; animation: girar .8s linear infinite; vertical-align: -1px; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+  .progreso .barra.carga i { animation: cargar 1.2s ease-in-out infinite; }
+  @keyframes cargar { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
   .progreso .ultimo { grid-column: 1 / -1; margin: 0; font-size: 13px; color: var(--suave); }
   @media (max-width: 600px) { .progreso { grid-template-columns: 1fr 1fr; } }
   .puter-caja { border: 1px solid var(--acento); border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 14px; }
@@ -248,7 +253,7 @@
   <div class="ajustes" id="ajustes" hidden>
     <h2>Ajustes</h2>
     <div class="grupo">Claves de IA <span class="fila"><span id="estadoGemini" class="estado"></span><button id="cambiarGemini">Cambiar</button></span></div>
-    <div class="grupo">Guion <select id="motorGuion"><option value="gemini">Gemini (automático)</option><option value="openai">OpenAI (automático)</option><option value="puter">Puter (gratis con tu cuenta)</option><option value="manual">ChatGPT a mano</option><option value="claude">Claude (tu suscripción)</option><option value="ollama">Ollama (local)</option></select></div>
+    <div class="grupo">Guion <select id="motorGuion"><option value="gemini">Gemini (automático)</option><option value="openai">OpenAI (automático)</option><option value="pollinations">Gratis sin cuenta (Pollinations)</option><option value="puter">Puter (gratis con tu cuenta)</option><option value="manual">ChatGPT a mano</option><option value="claude">Claude (tu suscripción)</option><option value="ollama">Ollama (local)</option></select></div>
     <div class="grupo">Imágenes <select id="motorImagen"><option value="gemini">Gemini (con tu estilo y personajes iguales)</option><option value="openai">OpenAI gpt-image (de pago, la mejor calidad)</option><option value="cloudflare">Cloudflare FLUX.2 (gratis cada día)</option><option value="puter">Puter (Gemini gratis con tu cuenta)</option><option value="pollinations">Pollinations (gratis, sin clave)</option><option value="manual">Las pego yo (ChatGPT…)</option></select></div>
     <div class="grupo">Voz <select id="voz"></select></div>
     <div class="grupo">Clave Pollinations <span class="fila"><input id="token" type="password" placeholder="opcional, quita la marca de agua"><button id="guardarToken">Guardar</button></span></div>
@@ -394,10 +399,22 @@ function cargarPuter() {
     document.head.appendChild(s);
   });
 }
+// Puter mide en microcentavos ($0,01 = 1.000.000). Por debajo de esto no se le llama:
+// si no, saca su propio aviso de «Low Balance» encima de la app.
+const SALDO_MINIMO = { texto: 300000, voz: 300000, imagen: 5000000 };
+async function puterConSaldo(tipo) {
+  try {
+    const u = await puter.auth.getMonthlyUsage();
+    const queda = u?.allowanceInfo?.remaining;
+    return typeof queda !== "number" || queda >= SALDO_MINIMO[tipo];
+  } catch { return true; }
+}
+const SIN_SALDO_PUTER = "insufficient credits: tu saldo gratis de Puter se acabó este mes";
 async function puterConectado() { try { await cargarPuter(); return puter.auth.isSignedIn(); } catch { return false; } }
 async function conectarPuter() { await cargarPuter(); if (!puter.auth.isSignedIn()) await puter.auth.signIn(); }
 async function vozPuter(texto, vozId) {
   await cargarPuter();
+  if (!(await puterConSaldo("voz"))) throw new Error(SIN_SALDO_PUTER);
   const a = await puter.ai.txt2speech(texto, { provider: "gemini", voice: vozId.split(":")[1] });
   return await (await fetch(a.src)).blob();
 }
@@ -427,6 +444,7 @@ async function modeloTexto() {          // el Gemini flash más nuevo que ofrezc
 const blobsDe = (pid, rels) => Promise.all((rels || []).map(rel => fetch(`/archivos/${pid}/${rel}`).then(r => r.blob())));
 async function textoPuter(prompt, blobs) {
   await cargarPuter();
+  if (!(await puterConSaldo("texto"))) throw new Error(SIN_SALDO_PUTER);
   const opciones = { normalize: true }, modelo = await modeloTexto();
   if (modelo) opciones.model = modelo;
   const archivos = blobs.map((b, i) => new File([b], `ref${i}.jpg`, { type: b.type || "image/jpeg" }));
@@ -436,6 +454,7 @@ async function textoPuter(prompt, blobs) {
 }
 async function imagenPuter(prompt, blobs) {
   await cargarPuter();
+  if (!(await puterConSaldo("imagen"))) throw new Error(SIN_SALDO_PUTER);
   const ruta = `videofree/img-${Date.now()}.png`;
   const opciones = { provider: "gemini", aspect_ratio: "16:9", puter_output_path: ruta };
   if (blobs.length) opciones.input_images = blobs;
@@ -489,7 +508,9 @@ async function narrarEnNavegador(pid) {
     }
   } catch (err) {
     errorPuter = err?.message || err?.error?.message || JSON.stringify(err);
-    await new Promise(r => setTimeout(r, 8000));   // no martillear a Puter si falla
+    if (SIN_CREDITOS.test(errorPuter)) {
+      await api(`/api/proyectos/${pid}/voz_sin_saldo`, { method: "POST", body: JSON.stringify({ motivo: errorPuter }) }).catch(() => {});
+    } else await new Promise(r => setTimeout(r, 8000));   // no martillear a Puter si falla
   } finally { narrando = null; }
 }
 
@@ -510,7 +531,10 @@ async function oir(id, boton) {
       muestrasPuter[id] ||= URL.createObjectURL(await vozPuter(FRASE_MUESTRA, id));
     } catch (err) {
       boton.textContent = "▶ Escuchar";
-      return alert("Puter no ha podido narrar: " + (err?.message || err?.error?.message || JSON.stringify(err)));
+      const motivo = err?.message || err?.error?.message || JSON.stringify(err);
+      return alert(SIN_CREDITOS.test(motivo)
+        ? "Tu saldo gratis de Puter se acabó este mes. Para Puck, Charon y Kore gratis de verdad, pega tu clave de Gemini en el Asistente (es gratis), o elige una voz gratis."
+        : "Puter no ha podido narrar: " + motivo);
     }
     src = muestrasPuter[id];
   }
@@ -781,11 +805,8 @@ function pintar() {
       <ul>${(d.biblia.personajes || []).map(p => `<li><b>${esc(p.nombre)}</b>: ${esc(p.descripcion_visual)}</li>`).join("")}</ul>
       ${d.hoja ? `<p class="estado">Hoja de personajes (Gemini la usa como referencia en cada escena):</p>
       <a href="${archivo(d.hoja)}" target="_blank"><img src="${archivo(d.hoja)}" alt="Hoja de personajes" style="max-width:100%;border-radius:8px"></a>` : ""}</details>` : ""}
-    <div class="escenas">${d.escenas.map(e => tarjeta(e, ocupado)).join("")}</div>
-    <h2 style="margin-top:18px">Registro</h2>
-    <div class="registro" id="registro">${esc(d.registro.slice(-60).join("\n"))}</div>`;
+    <div class="escenas">${d.escenas.map(e => tarjeta(e, ocupado)).join("")}</div>`;
 
-  const reg = $("#registro"); reg.scrollTop = reg.scrollHeight;
   const selVoz = selectorVoz($("#pVoz"), d.voz || config.voz, async nueva => {
     if (d.escenas.some(e => e.audio) && !confirm(`¿Cambiar a ${nombreVoz(nueva)}? Habrá que volver a narrar el vídeo (paso 2 · Voz).`)) {
       selVoz.value = d.voz || config.voz; return;
@@ -1129,8 +1150,9 @@ function progreso(d) {
   return `<div class="progreso">${etapas.map(([id, nombre, cuenta, hecho]) => {
       const aqui = actual === id || (actual === "voz + imagenes" && (id === "voz" || id === "imagenes"));
       const estado = aqui ? "aqui" : hecho >= 1 ? "hecho" : "";
-      return `<div class="etapa ${estado}"><div class="cab"><span>${estado === "hecho" ? "✓" : aqui ? "⏳" : "○"} ${nombre}</span><small>${cuenta}</small></div>
-        <div class="barra"><i style="width:${Math.round(Math.min(1, hecho) * 100)}%"></i></div></div>`;
+      const cargando = aqui && hecho < 1 && (id === "guion" || id === "montaje" || hecho === 0);
+      return `<div class="etapa ${estado}"><div class="cab"><span>${estado === "hecho" ? "✓" : aqui ? `<span class="girando"></span>` : "○"} ${nombre}</span><small>${cuenta}</small></div>
+        <div class="barra ${cargando ? "carga" : ""}"><i style="width:${cargando ? 35 : Math.round(Math.min(1, hecho) * 100)}%"></i></div></div>`;
     }).join("")}
     <p class="ultimo">${esc(ultimo.replace(/^\d\d:\d\d:\d\d\s+/, ""))}</p></div>`;
 }
@@ -1139,7 +1161,7 @@ function progreso(d) {
 const MAGO = ["modo", "tema", "estilo", "voz", "listo"];
 let pasoMago = 0;
 const NOMBRE_MOTOR = { gemini: "Gemini (tu clave)", openai: "OpenAI (tu clave)", cloudflare: "FLUX.2 gratis cada día (tu cuenta de Cloudflare)", puter: "Gemini gratis con tu cuenta de Puter",
-  pollinations: "Pollinations (gratis)", manual: "Lo pegas tú (ChatGPT)", claude: "Claude (tu suscripción)", ollama: "Ollama (local)", prueba: "De prueba" };
+  pollinations: "Gratis, sin cuenta (Pollinations)", manual: "Lo pegas tú (ChatGPT)", claude: "Claude (tu suscripción)", ollama: "Ollama (local)", prueba: "De prueba" };
 function abrirMago(inicio = 0) {
   if (!sesion.usuario) return mostrarAcceso();
   pasoMago = inicio; $("#mago").hidden = false; pintarMago();
