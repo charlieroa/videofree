@@ -17,10 +17,20 @@ API (changelog de Cloudflare, 2026-01-15): POST multipart a
 con prompt, width, height (256-1920), seed, guidance e input_image_N. Los pasos
 van fijos en 4 (modelo destilado). Devuelve la imagen en base64.
 
-Secretos (secretos/<usuario>.json): cf_cuenta (Account ID) y cf_token.
+Dos formas de conectar la cuenta:
+  - «Entrar con Cloudflare»: la app lanza `wrangler login` (la herramienta oficial
+    de Cloudflare, por npx; hace falta Node.js). Se abre el navegador, la persona
+    entra (tambien con Google) y acepta. Aqui solo se guarda cf_modo=wrangler y el
+    Account ID; el token lo da `wrangler auth token` (caduca a la hora y wrangler
+    lo renueva solo), cacheado unos minutos.
+  - A mano: Account ID + token de Workers AI (secretos cf_cuenta y cf_token).
 """
 import base64
 import io
+import json
+import shutil
+import subprocess
+import threading
 import time
 
 import requests
@@ -49,21 +59,132 @@ def credenciales():
         s = proyecto.secretos()
     except RuntimeError:
         return None
-    cuenta, token = (s.get("cf_cuenta") or "").strip(), (s.get("cf_token") or "").strip()
-    return (cuenta, token) if cuenta and token else None
+    cuenta = (s.get("cf_cuenta") or "").strip()
+    if not cuenta:
+        return None
+    if s.get("cf_modo") == "wrangler":
+        token = token_wrangler()
+        return (cuenta, token) if token else None
+    token = (s.get("cf_token") or "").strip()
+    return (cuenta, token) if token else None
+
+
+def conectada():
+    """¿Hay cuenta guardada? (sin pedir token: es lo que enseña la pantalla)."""
+    try:
+        s = proyecto.secretos()
+    except RuntimeError:
+        return False
+    return bool((s.get("cf_cuenta") or "").strip()
+                and (s.get("cf_modo") == "wrangler" or (s.get("cf_token") or "").strip()))
 
 
 def hay_clave():
-    return bool(credenciales())
+    return conectada()
 
 
 def guardar(cuenta, token):
     proyecto.guardar_secreto("cf_cuenta", cuenta.strip())
     proyecto.guardar_secreto("cf_token", token.strip())
+    proyecto.borrar_secretos("cf_modo")
 
 
 def olvidar():
-    proyecto.borrar_secretos("cf_cuenta", "cf_token")
+    proyecto.borrar_secretos("cf_cuenta", "cf_token", "cf_modo")
+
+
+# ------------------------------------------- «Entrar con Cloudflare» (wrangler)
+
+WRANGLER = "wrangler@4"
+_token_cache = {"token": None, "hora": 0.0}
+_login = {"proceso": None, "estado": "", "texto": "", "usuario": None}
+_cerrojo = threading.Lock()
+
+
+def hay_node():
+    return bool(shutil.which("npx"))
+
+
+def _wrangler(*args, timeout=180):
+    npx = shutil.which("npx")
+    if not npx:
+        raise ErrorCloudflare("Falta Node.js (nodejs.org) para entrar con Cloudflare. "
+                              "O pega tu Account ID y tu token a mano.")
+    r = subprocess.run([npx, "-y", WRANGLER, *args], capture_output=True, text=True,
+                       encoding="utf-8", errors="replace", timeout=timeout, cwd=proyecto.RAIZ)
+    return r.returncode, r.stdout.strip(), r.stderr.strip()
+
+
+def token_wrangler():
+    """El token OAuth de wrangler (lo renueva el propio wrangler). Cache de 10 min."""
+    with _cerrojo:
+        if _token_cache["token"] and time.time() - _token_cache["hora"] < 600:
+            return _token_cache["token"]
+    try:
+        codigo, salida, _ = _wrangler("auth", "token", "--json", timeout=120)
+    except (ErrorCloudflare, subprocess.TimeoutExpired):
+        return None
+    if codigo != 0 or not salida:
+        return None
+    token = None
+    try:
+        d = json.loads(salida[salida.index("{"):])
+        token = d.get("token") or d.get("value") or d.get("access_token") or d.get("apiToken")
+    except ValueError:
+        token = salida.splitlines()[-1].strip()
+    with _cerrojo:
+        _token_cache.update(token=token, hora=time.time())
+    return token
+
+
+def _cuentas(token):
+    r = requests.get(BASE, params={"per_page": 50}, headers={"Authorization": f"Bearer {token}"}, timeout=30)
+    if r.status_code != 200:
+        raise _mensaje(r)
+    return r.json().get("result") or []
+
+
+def empezar_login(usuario):
+    """Lanza `wrangler login` (abre el navegador). El estado se mira con estado_login()."""
+    with _cerrojo:
+        p = _login["proceso"]
+        if p and p.poll() is None:
+            return
+        npx = shutil.which("npx")
+        if not npx:
+            raise ErrorCloudflare("Falta Node.js (nodejs.org) para entrar con Cloudflare. "
+                                  "O pega tu Account ID y tu token a mano.")
+        _token_cache.update(token=None, hora=0)
+        _login.update(estado="esperando", texto="Se abrió Cloudflare en tu navegador: entra (puedes "
+                      "usar Google) y pulsa «Allow».", usuario=usuario,
+                      proceso=subprocess.Popen([npx, "-y", WRANGLER, "login"], cwd=proyecto.RAIZ,
+                                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
+
+
+def estado_login():
+    """esperando | listo | error. Al terminar el login guarda la cuenta de la persona."""
+    with _cerrojo:
+        p, estado = _login["proceso"], _login["estado"]
+    if estado != "esperando" or not p or p.poll() is None:
+        return {"estado": estado or "nada", "texto": _login["texto"]}
+    token = token_wrangler()
+    if not token:
+        _login.update(estado="error", texto="No se completó la entrada en Cloudflare. Vuelve a intentarlo.")
+        return {"estado": "error", "texto": _login["texto"]}
+    try:
+        cuentas = _cuentas(token)
+    except ErrorCloudflare as err:
+        _login.update(estado="error", texto=str(err))
+        return {"estado": "error", "texto": _login["texto"]}
+    if not cuentas:
+        _login.update(estado="error", texto="Tu usuario de Cloudflare no tiene ninguna cuenta.")
+        return {"estado": "error", "texto": _login["texto"]}
+    proyecto.guardar_secreto("cf_cuenta", cuentas[0]["id"])
+    proyecto.guardar_secreto("cf_modo", "wrangler")
+    proyecto.borrar_secretos("cf_token")
+    _login.update(estado="listo", texto=f"✓ Conectado a Cloudflare ({cuentas[0].get('name', '')}). "
+                                        f"Imágenes FLUX.2 gratis cada día.")
+    return {"estado": "listo", "texto": _login["texto"]}
 
 
 def cfg():

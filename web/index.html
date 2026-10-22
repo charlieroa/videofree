@@ -1162,6 +1162,22 @@ const MAGO = ["modo", "tema", "estilo", "voz", "listo"];
 let pasoMago = 0;
 const NOMBRE_MOTOR = { gemini: "Gemini (tu clave)", openai: "OpenAI (tu clave)", cloudflare: "FLUX.2 gratis cada día (tu cuenta de Cloudflare)", puter: "Gemini gratis con tu cuenta de Puter",
   pollinations: "Gratis, sin cuenta (Pollinations)", manual: "Lo pegas tú (ChatGPT)", claude: "Claude (tu suscripción)", ollama: "Ollama (local)", prueba: "De prueba" };
+// «Entrar con Cloudflare»: el servidor lanza wrangler login (abre el navegador) y aquí se
+// espera a que la persona entre. Al terminar se recarga la config y se repinta.
+async function entrarCloudflare(estado, despues) {
+  if (!config.node) { estado.textContent = "Falta Node.js (nodejs.org): usa el Asistente → Cloudflare → a mano."; return; }
+  try {
+    let r = await api("/api/cloudflare/entrar", { method: "POST" });
+    estado.textContent = r.texto || "Abriendo Cloudflare…";
+    for (let i = 0; i < 200 && r.estado !== "listo" && r.estado !== "error"; i++) {
+      await new Promise(ok => setTimeout(ok, 3000));
+      r = await api("/api/cloudflare/entrar");
+      if (r.texto) estado.textContent = r.texto;
+    }
+    if (r.estado === "listo") { await cargarConfig(); if (despues) despues(); }
+  } catch (e) { estado.textContent = "✗ " + e.message; }
+}
+
 function abrirMago(inicio = 0) {
   if (!sesion.usuario) return mostrarAcceso();
   pasoMago = inicio; $("#mago").hidden = false; pintarMago();
@@ -1189,7 +1205,11 @@ async function pintarResumen() {
       <dt>Voz</dt><dd>${esc(ficha.nombre || vozId)}${ficha.puter ? " · gratis con tu cuenta de Puter" : ficha.gemini ? " · Gemini (tu clave)" : " · gratis"}</dd></dl>
     ${puter ? `<div class="puter-caja">✨ Usa tus <b>créditos gratis de Puter</b>: lo hace tu navegador, sin claves. Conéctalo ahora (una sola vez) y deja la pestaña abierta mientras se hace el vídeo.
       <div class="fila" style="margin-top:8px"><button id="magoPuter">Conectar Puter</button><span class="estado" id="magoPuterEstado"></span></div></div>` : ""}
+    ${imgM === "pollinations" ? `<div class="puter-caja">⚠ Sin cuenta, las imágenes salen de Pollinations: <b>calidad baja, con marca de agua y sin copiar tu imagen de ejemplo</b>.
+      Conecta Cloudflare (gratis cada día, FLUX.2, copia tu estilo y tus personajes):
+      <div class="fila" style="margin-top:8px"><button class="primario" id="magoCf">Entrar con Cloudflare</button><span class="estado" id="magoCfEstado"></span></div></div>` : ""}
     ${guionM === "manual" && !prueba ? `<p class="ayuda">El guion es a mano: en la página del vídeo te damos el prompt para pegarlo en ChatGPT.</p>` : ""}`;
+  if ($("#magoCf")) $("#magoCf").onclick = () => entrarCloudflare($("#magoCfEstado"), pintarResumen);
   if ($("#magoPuter")) {
     if (await puterConectado()) $("#magoPuterEstado").textContent = "✓ Conectado";
     $("#magoPuter").onclick = async () => {
@@ -1237,7 +1257,9 @@ async function pintarAsistente() {
         <label class="opcion" style="flex:1"><input type="radio" name="provA" value="openai" ${oa ? "checked" : ""}><span><b>OpenAI</b><small>ChatGPT · de pago (centavos por imagen) · guion e imágenes${config.openai ? " · guardada ✓" : ""}</small></span></label>
         <label class="opcion" style="flex:1"><input type="radio" name="provA" value="cloudflare" ${cf ? "checked" : ""}><span><b>Cloudflare</b><small>Gratis cada día · imágenes FLUX.2 con tus personajes${config.cloudflare ? " · guardada ✓" : ""}</small></span></label>
       </div>
-      ${cf ? `<ol>
+      ${cf ? `${config.node ? `<div class="puter-caja"><b>La forma fácil:</b> pulsa el botón, entra en Cloudflare en la ventana que se abre (puedes usar Google; si no tienes cuenta, la creas ahí gratis, sin tarjeta) y pulsa <b>Allow</b>.
+        <div class="fila" style="margin-top:8px"><button class="primario" id="cfEntrar">Entrar con Cloudflare</button><span class="estado" id="cfEntrarEstado"></span></div></div>
+        <p class="estado">O a mano:</p>` : ""}<ol>
         <li>Crea tu cuenta gratis en <a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noopener">dash.cloudflare.com</a> (sin tarjeta).</li>
         <li>En el menú, entra en <b>AI → Workers AI</b> y pulsa <b>Use REST API</b>.</li>
         <li>Copia tu <b>Account ID</b>, pulsa <b>Create a Workers AI API Token</b> y copia el token.</li>
@@ -1307,6 +1329,7 @@ async function pintarAsistente() {
     const oa = proveedorAsis === "openai", cf = proveedorAsis === "cloudflare";
     const ruta = cf ? "/api/cloudflare" : oa ? "/api/openai" : "/api/gemini", quien = cf ? "Cloudflare" : oa ? "OpenAI" : "Gemini";
     caja.querySelectorAll('input[name="provA"]').forEach(r => r.onchange = () => { proveedorAsis = r.value; pintarAsistente(); });
+    if ($("#cfEntrar")) $("#cfEntrar").onclick = () => entrarCloudflare($("#cfEntrarEstado"), pintarAsistente);
     $("#gProbar").onclick = async () => {
       const clave = $("#gClave").value.trim();
       if (!clave) return $("#gEstado").textContent = (cf ? config.cloudflare : oa ? config.openai : config.gemini) ? "✓ Ya tienes una clave guardada." : "Pega primero tu clave.";

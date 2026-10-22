@@ -348,7 +348,7 @@ def ver_config():
             "asistente_hecho": bool(yo and proyecto.secretos().get("asistente_hecho")),
             "gemini": bool(yo and gemini.hay_clave()),
             "openai": bool(yo and openai_img.hay_clave()),
-            "cloudflare": bool(yo and cloudflare_img.hay_clave())}
+            "cloudflare": bool(yo and cloudflare_img.hay_clave()), "node": cloudflare_img.hay_node()}
 
 
 @app.post("/api/config")
@@ -786,6 +786,29 @@ def cloudflare_guardar(c: ClaveCloudflare):
         raise HTTPException(400, texto)
     cloudflare_img.guardar(c.cuenta, c.token)
     return {"ok": True, "texto": texto, "modelos": {"imagen": "FLUX.2 [klein] 4B"}}
+
+
+@app.post("/api/cloudflare/entrar")
+def cloudflare_entrar():
+    """«Entrar con Cloudflare»: lanza `wrangler login`, que abre el navegador."""
+    _yo()
+    try:
+        cloudflare_img.empezar_login(usuarios.ACTUAL.get())
+    except cloudflare_img.ErrorCloudflare as err:
+        raise HTTPException(400, str(err))
+    return cloudflare_img.estado_login()
+
+
+@app.get("/api/cloudflare/entrar")
+def cloudflare_entrar_estado():
+    _yo()
+    r = cloudflare_img.estado_login()
+    if r["estado"] == "listo":
+        cfg = proyecto.config()
+        if cfg["imagen"]["motor"] in ("gemini", "pollinations", "puter"):
+            cfg["imagen"]["motor"] = "cloudflare"
+            proyecto.CONFIG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+    return r
 
 
 @app.delete("/api/cloudflare")
