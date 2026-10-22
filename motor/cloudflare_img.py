@@ -88,6 +88,9 @@ def _mensaje(r):
     if r.status_code in (401, 403) or "authentication" in bajo or "10000" in texto:
         return ErrorCloudflare("Cloudflare no acepta ese token o ese Account ID. Crea el token en "
                                "dash.cloudflare.com → AI → Workers AI → «Use REST API».")
+    if "7003" in texto or "object identifier" in bajo:
+        return ErrorCloudflare("Ese Account ID no es válido: cópialo de dash.cloudflare.com → AI → "
+                               "Workers AI → «Use REST API» (son 32 letras y números).")
     if r.status_code == 429 or "4006" in texto or "neuron" in bajo or "allocation" in bajo or "quota" in bajo:
         return ErrorCuota("Se acabó el cupo gratis de hoy de Cloudflare (10.000 neuronas; vuelve a "
                           "las 00:00 UTC).")
