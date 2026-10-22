@@ -4,7 +4,11 @@ Paso 2: la voz de cada escena.
 El catalogo, en este orden:
   - Puck (la de serie), Charon y Kore: Gemini TTS, con la clave de Gemini de la
     persona. El tono del video se da con un prefijo corto en el propio texto
-    (motor/gemini.py). Sin clave de Gemini se narra con Jorge y el registro lo dice.
+    (motor/gemini.py). SIN clave de Gemini las narra el NAVEGADOR con Puter.js
+    (puter.com: cada persona entra con su cuenta gratis de Puter y el gasto va a
+    esa cuenta). Este paso no puede llamar a Puter: marca el video con
+    'voz_navegador', espera, y la pestaña abierta narra cada escena y la sube
+    (POST /api/proyectos/<id>/escena/<n>/audio).
   - Voces gratis y sin clave de edge-tts (Microsoft), de varios paises (GRATIS), y
     Jorge (es-MX-JorgeNeural) al final.
 
@@ -16,6 +20,7 @@ tendria la frase leida.
 """
 import asyncio
 import re
+import time
 
 import edge_tts
 
@@ -38,10 +43,14 @@ GRATIS = [
 ]
 FRASE_MUESTRA = "Hola, así va a sonar la narración de tu video. ¿Te gusta cómo suena?"
 def catalogo():
-    """Primero las 3 de Gemini (Puck es la de serie), luego las gratis y Jorge al final."""
+    """Primero las 3 de Gemini (Puck es la de serie), luego las gratis y Jorge al final.
+
+    Las de Gemini siempre se pueden elegir: con clave las narra el servidor, sin
+    clave el navegador con Puter ('puter': True).
+    """
     con_clave = gemini.hay_clave()
     voces = [{"id": vid, "nombre": v["nombre"], "pais": "Gemini", "genero": v["genero"],
-              "detalle": v["detalle"], "gemini": True, "lista": con_clave}
+              "detalle": v["detalle"], "gemini": True, "lista": True, "puter": not con_clave}
              for vid, v in gemini.VOCES.items()]
     voces += [{"id": vid, "nombre": nombre, "pais": pais, "genero": genero,
                "detalle": "gratis, sin clave", "gemini": False, "lista": True}
@@ -83,16 +92,71 @@ def _silencio(texto, destino):
                   "-b:a", "64k", destino)
 
 
+ESPERA_MAX_S = 15 * 60          # sin ninguna escena nueva en este tiempo, se corta
+
+
+def _esperar_navegador(datos, elegida, avisar, solo):
+    """Sin clave de Gemini: la pestaña narra con Puter y sube cada escena; aqui se espera."""
+    if solo:
+        for e in datos["escenas"]:
+            if e["n"] in solo:
+                e["audio"], e["duracion"] = None, None
+    datos["voz_navegador"] = elegida
+    proyecto.guardar(datos)
+    nombre = elegida.split(":", 1)[1]
+    avisar(f"Narrando con {nombre} en tu navegador (cuenta gratis de Puter): deja esta "
+           f"pestaña abierta. Si te lo pide, pulsa «Conectar Puter».")
+    hechas, ultimo = -1, time.time()
+    try:
+        while True:
+            fresco = proyecto.leer(datos["id"])
+            faltan = [e for e in fresco["escenas"] if not e.get("audio")]
+            listas = len(fresco["escenas"]) - len(faltan)
+            if listas != hechas:
+                hechas, ultimo = listas, time.time()
+            if not faltan:
+                break
+            if time.time() - ultimo > ESPERA_MAX_S:
+                raise RuntimeError(f"El navegador no ha narrado ninguna escena en {ESPERA_MAX_S // 60} "
+                                   f"min. Abre el vídeo, conecta Puter y vuelve a pulsar «2 · Voz», "
+                                   f"o pega tu clave de Gemini, o elige una voz gratis.")
+            time.sleep(2)
+    finally:
+        fresco = proyecto.leer(datos["id"])
+        for e, f in zip(datos["escenas"], fresco["escenas"]):   # lo que subio el navegador
+            e["audio"], e["duracion"] = f.get("audio"), f.get("duracion")
+        datos["voz_navegador"] = None
+        proyecto.guardar(datos)
+    datos["mp4"] = None
+    total = sum(e["duracion"] or 0 for e in datos["escenas"])
+    avisar(f"Voz lista: {total / 60:.1f} min de narracion (Puter).")
+
+
+def guardar_audio(datos, e, crudo):
+    """Un audio de escena que manda el navegador (Puter): se pasa a mp3 y se mide."""
+    import tempfile
+    from pathlib import Path
+    carpeta = proyecto.carpeta(datos["id"]) / "voz"
+    carpeta.mkdir(exist_ok=True)
+    destino = carpeta / f"escena_{e['n']:03d}.mp3"
+    with tempfile.TemporaryDirectory() as tmp:
+        origen = Path(tmp) / "entrada"
+        origen.write_bytes(crudo)
+        medios.ffmpeg("-i", origen, "-ac", 1, "-b:a", "128k", destino)
+    e["audio"] = proyecto.relativa(datos, destino)
+    e["duracion"] = round(medios.duracion(destino), 2)
+    datos["mp4"] = None
+    proyecto.guardar(datos)
+
+
 def ejecutar(datos, avisar, solo=None):
     cfg = proyecto.config()["voz"]
     elegida = datos.get("voz") or cfg["voz"]          # la del video; si no tiene, la de Ajustes
     carpeta = proyecto.carpeta(datos["id"]) / "voz"
     carpeta.mkdir(exist_ok=True)
     if gemini.es_suya(elegida) and not datos.get("simular") and not gemini.hay_clave():
-        # Puck es la de serie: sin clave de Gemini el video no se queda parado, sale con Jorge.
-        avisar(f"Sin clave de Gemini no se puede usar {elegida.split(':')[1]}: narro con Jorge "
-               f"(gratis). Pega tu clave de Gemini en el Asistente para usar Puck, Charon o Kore.")
-        elegida = JORGE
+        _esperar_navegador(datos, elegida, avisar, solo)
+        return
     for e in datos["escenas"]:
         if solo and e["n"] not in solo:
             continue

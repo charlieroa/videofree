@@ -430,6 +430,7 @@ def ver(pid: str):
     datos["ocupado"] = _ocupado(pid)
     if not datos["ocupado"] and datos.get("trabajo"):
         datos["trabajo"] = None            # quedo a medias al cerrar el programa
+        datos["voz_navegador"] = None
     datos["estimacion"] = imagenes.estimar(datos)
     datos["prompts"] = {e["n"]: imagenes.prompt_de(datos, e) for e in datos["escenas"]}
     datos["sello"] = time.time()
@@ -486,6 +487,32 @@ def editar_escena(pid: str, n: int, cambio: Escena):
     datos["mp4"] = None
     proyecto.guardar(datos)
     return ver(pid)
+
+
+class AudioEscena(BaseModel):
+    audio: str              # data URL del audio que hizo el navegador con Puter
+
+
+@app.post("/api/proyectos/{pid}/escena/{n}/audio")
+def subir_audio(pid: str, n: int, a: AudioEscena):
+    """La narracion de una escena hecha en el navegador (voz de Gemini sin clave, via Puter).
+    Solo mientras el paso de voz la espera: es lo unico que puede escribir con un trabajo en marcha."""
+    datos = _mio(pid)
+    if not datos.get("voz_navegador") or not _ocupado(pid):
+        raise HTTPException(409, "Este vídeo no está esperando voz del navegador.")
+    import base64
+    try:
+        crudo = base64.b64decode(a.audio.split(",", 1)[-1], validate=False)
+    except Exception:
+        raise HTTPException(400, "No he podido leer ese audio.")
+    if not crudo or len(crudo) > 20 * 1024 * 1024:
+        raise HTTPException(400, "Audio vacío o demasiado grande.")
+    e = _escena(datos, n)
+    try:
+        voz.guardar_audio(datos, e, crudo)
+    except Exception as err:
+        raise HTTPException(400, f"No he podido usar ese audio: {err}")
+    return {"ok": True, "duracion": e["duracion"]}
 
 
 @app.post("/api/proyectos/{pid}/escena/{n}/imagen")

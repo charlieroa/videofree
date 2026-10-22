@@ -109,6 +109,20 @@ girarla según el EXIF), con la proporción final (1:1 o 16:9). Puede salirse de
 < 1): el hueco se rellena con la foto ampliada, desenfocada y oscurecida. Solo se reescala el
 trozo que cae dentro, no la foto entera. Sin `recorte`, el encuadre automático de siempre.
 
+## Voces de Gemini sin clave (Puter)
+
+Sin clave de Gemini, Puck, Charon y Kore las narra el **navegador** con
+[Puter.js](https://developer.puter.com/) (`puter.ai.txt2speech(texto, {provider: "gemini", voice})`):
+cada persona entra una vez con su cuenta gratis de Puter (botón «Conectar Puter» o al pulsar
+▶ Escuchar; abrir esa ventana solo se puede desde un clic) y el gasto va a su cuenta, con el
+cupo gratis que fije Puter.
+
+El servidor no puede llamar a Puter, así que el paso de voz marca el vídeo con
+`voz_navegador`, espera, y la pestaña abierta narra escena a escena y sube cada audio a
+`POST /api/proyectos/<id>/escena/<n>/audio` (solo se acepta mientras esa espera está en
+marcha). Se pasa a mp3 con ffmpeg y se mide. Si en 15 min no llega ninguna escena, el paso se
+corta con un mensaje. Hay que dejar la pestaña abierta mientras se hace la voz.
+
 ## Pollinations (respaldo, sin clave)
 
 Flux por la API pública: una imagen cada ~45 s por IP. Un vídeo de 14 min (~85 imágenes)

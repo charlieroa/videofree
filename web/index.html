@@ -328,20 +328,77 @@ const guardarCfg = cambio => api("/api/config", { method: "POST", body: JSON.str
 // Las voces en español van agrupadas por país, y todas se pueden escuchar antes.
 const nombreVoz = id => { const v = voces.find(x => x.id === id); return v ? `${v.nombre} · ${v.pais}${v.genero ? " · " + v.genero : ""}` : id; };
 function opcionesVoz(elegida) {
-  return voces.map(v => `<option value="${v.id}" ${v.id === elegida ? "selected" : ""}>${esc(v.nombre)} · ${esc(v.gemini ? "Gemini, " + v.genero + " " + v.detalle : v.pais + ", gratis")}${v.gemini && !v.lista ? " (necesita clave)" : ""}</option>`).join("")
+  return voces.map(v => `<option value="${v.id}" ${v.id === elegida ? "selected" : ""}>${esc(v.nombre)} · ${esc(v.gemini ? "Gemini, " + v.genero + " " + v.detalle : v.pais + ", gratis")}${v.puter ? " (gratis con cuenta Puter)" : ""}</option>`).join("")
     + (elegida && !voces.some(v => v.id === elegida) ? `<option value="${esc(elegida)}" selected>${esc(elegida)}</option>` : "");
 }
+// ------------------------------------------------------------- Puter
+// Sin clave de Gemini, Puck, Charon y Kore las narra ESTE navegador con Puter.js
+// (puter.com): cada persona entra una vez con su cuenta gratis de Puter y el gasto va
+// a esa cuenta. El servidor no puede llamar a Puter: espera y la pestaña le sube cada
+// escena. Entrar abre una ventana, y eso solo se puede desde un clic.
+let puterCargando = null;
+function cargarPuter() {
+  if (window.puter) return Promise.resolve(window.puter);
+  return puterCargando ||= new Promise((ok, no) => {
+    const s = document.createElement("script");
+    s.src = "https://js.puter.com/v2/";
+    s.onload = () => { puter.quiet = true; ok(puter); };
+    s.onerror = () => { puterCargando = null; no(new Error("no se pudo cargar Puter: revisa tu conexión")); };
+    document.head.appendChild(s);
+  });
+}
+async function puterConectado() { try { await cargarPuter(); return puter.auth.isSignedIn(); } catch { return false; } }
+async function conectarPuter() { await cargarPuter(); if (!puter.auth.isSignedIn()) await puter.auth.signIn(); }
+async function vozPuter(texto, vozId) {
+  await cargarPuter();
+  const a = await puter.ai.txt2speech(texto, { provider: "gemini", voice: vozId.split(":")[1] });
+  return await (await fetch(a.src)).blob();
+}
+const FRASE_MUESTRA = "Hola, así va a sonar la narración de tu video. ¿Te gusta cómo suena?";
+const muestrasPuter = {};
+let narrando = null, errorPuter = "";          // el vídeo que esta pestaña está narrando con Puter
+async function narrarEnNavegador(pid) {
+  if (narrando) return;
+  if (!(await puterConectado())) return;       // falta el clic en «Conectar Puter»
+  narrando = pid;
+  try {
+    while (true) {
+      const d = await api(`/api/proyectos/${pid}`);
+      if (!d.voz_navegador || !d.ocupado) break;
+      const e = d.escenas.find(x => !x.audio);
+      if (!e) break;
+      const audio = await leerArchivo(await vozPuter(e.narracion, d.voz_navegador));
+      await api(`/api/proyectos/${pid}/escena/${e.n}/audio`, { method: "POST", body: JSON.stringify({ audio }) });
+      errorPuter = "";
+    }
+  } catch (err) {
+    errorPuter = err?.message || err?.error?.message || JSON.stringify(err);
+    await new Promise(r => setTimeout(r, 8000));   // no martillear a Puter si falla
+  } finally { narrando = null; }
+}
+
 let sonando = null;
 // Pulsar ▶ la reproduce; pulsar otra vez el mismo botón la para.
-function oir(id, boton) {
+async function oir(id, boton) {
   const ficha = voces.find(v => v.id === id) || {};
-  if (ficha.gemini && !ficha.lista) return alert("Esta voz es de Gemini: pega tu clave en el Asistente para escucharla.");
   if (sonando) {
     const mismo = sonando.boton === boton;
     sonando.parar();
     if (mismo) return;
   }
-  const a = new Audio(`/api/voces/${encodeURIComponent(id)}/muestra?t=${Date.now()}`);
+  let src = `/api/voces/${encodeURIComponent(id)}/muestra?t=${Date.now()}`;
+  if (ficha.puter) {
+    boton.textContent = "⏳";
+    try {
+      await conectarPuter();
+      muestrasPuter[id] ||= URL.createObjectURL(await vozPuter(FRASE_MUESTRA, id));
+    } catch (err) {
+      boton.textContent = "▶ Escuchar";
+      return alert("Puter no ha podido narrar: " + (err?.message || err?.error?.message || JSON.stringify(err)));
+    }
+    src = muestrasPuter[id];
+  }
+  const a = new Audio(src);
   a.boton = boton;
   a.parar = () => { a.pause(); boton.textContent = "▶ Escuchar"; if (sonando === a) sonando = null; };
   sonando = a;
@@ -564,7 +621,9 @@ function pintar() {
     </div>
     <p class="estado">${d.escenas.length} escenas · ${(dur / 60).toFixed(1)} min de voz · ${plan} · coste 0 $</p>
     <div class="fila" style="max-width:520px"><span class="estado">Voz del vídeo</span><div id="pVoz" style="flex:1"></div></div>
-    ${voces.find(v => v.id === (d.voz || config.voz))?.gemini && !config.gemini ? `<p class="ayuda">Esta voz es de Gemini: sin tu clave de Gemini (gratis, en el Asistente) el vídeo se narra con Jorge.</p>` : ""}
+    ${voces.find(v => v.id === (d.voz || config.voz))?.puter ? `<p class="ayuda">${esc(nombreVoz(d.voz || config.voz))} la narra <b>tu navegador</b> con tu cuenta gratis de Puter (sin clave de Gemini):
+      deja esta pestaña abierta mientras se hace la voz. <button id="puterConectar">Conectar Puter</button>
+      <span class="estado" id="puterEstado">${d.voz_navegador && d.ocupado ? (errorPuter ? "✗ Puter: " + esc(errorPuter) : narrando ? "🎙 narrando escena por escena…" : "⚠ Pulsa «Conectar Puter» para que empiece la voz.") : ""}</span></p>` : ""}
     <div class="ref-proyecto"><span class="estado">Imagen de ejemplo del estilo</span>
       ${d.referencia ? `<a href="${archivo(d.referencia)}" target="_blank"><img src="${archivo(d.referencia)}" alt="Imagen de ejemplo"></a>` : `<span class="estado">— ninguna</span>`}
       <button id="refSubir" ${ocupado ? "disabled" : ""}>${d.referencia ? "Cambiar" : "Subir"}</button>
@@ -649,6 +708,11 @@ function pintar() {
     catch (e) { alert(e.message); }
     refrescar();
   };
+  if ($("#puterConectar")) $("#puterConectar").onclick = async () => {
+    try { await conectarPuter(); $("#puterEstado").textContent = "✓ Puter conectado."; } catch (e) { $("#puterEstado").textContent = "✗ " + (e?.message || e); }
+    if (d.voz_navegador && d.ocupado) narrarEnNavegador(d.id);
+  };
+  if (d.voz_navegador && d.ocupado) narrarEnNavegador(d.id);
   if ($("#copiarGuion")) {
     $("#copiarGuion").onclick = async ev => {
       const { prompt } = await api(`/api/proyectos/${actual}/guion_prompt`);
@@ -975,7 +1039,7 @@ async function pintarAsistente() {
     html += `<h2>Elige la voz</h2>
       <p>Pulsa ▶ para escucharla. Luego la puedes cambiar en cada vídeo.</p>
       ${voces.map(v => `<label class="opcion ${v.gemini && !v.lista ? "off" : ""}"><input type="radio" name="vozA" value="${v.id}" ${v.id === config.voz ? "checked" : ""} ${v.gemini && !v.lista ? "disabled" : ""}>
-          <span><b>${esc(v.nombre)}</b><small>${v.gemini ? `Gemini · ${esc(v.genero)} ${esc(v.detalle)}${v.lista ? "" : " · necesita la clave"}` : `${esc(v.pais)} · ${esc(v.genero)} · gratis, sin clave`}</small></span>
+          <span><b>${esc(v.nombre)}</b><small>${v.gemini ? `Gemini · ${esc(v.genero)} ${esc(v.detalle)}${v.puter ? " · gratis con tu cuenta de Puter" : ""}` : `${esc(v.pais)} · ${esc(v.genero)} · gratis, sin clave`}</small></span>
           <button type="button" class="oir" data-oir="${v.id}" ${v.gemini && !v.lista ? "disabled" : ""}>▶ Escuchar</button></label>`).join("")}`;
   } else {
     html += `<h2>¡Listo!</h2>
