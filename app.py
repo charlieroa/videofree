@@ -25,7 +25,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from motor import canal, gemini, guion, imagenes, montaje, navegador, nichos, openai_img, proyecto, usuarios, voz
+from motor import canal, cloudflare_img, gemini, guion, imagenes, montaje, navegador, nichos, openai_img, proyecto, usuarios, voz
 
 app = FastAPI(title="Video Simple")
 WEB = proyecto.RAIZ / "web"
@@ -347,7 +347,8 @@ def ver_config():
             "token_pollinations": bool(yo and proyecto.secretos().get("pollinations_token")),
             "asistente_hecho": bool(yo and proyecto.secretos().get("asistente_hecho")),
             "gemini": bool(yo and gemini.hay_clave()),
-            "openai": bool(yo and openai_img.hay_clave())}
+            "openai": bool(yo and openai_img.hay_clave()),
+            "cloudflare": bool(yo and cloudflare_img.hay_clave())}
 
 
 @app.post("/api/config")
@@ -356,7 +357,7 @@ def guardar_config(a: Ajustes):
     cfg = proyecto.config()
     if a.voz:
         cfg["voz"]["voz"] = _voz_valida(a.voz)
-    if a.motor_imagen in ("gemini", "openai", "puter", "pollinations", "manual"):
+    if a.motor_imagen in ("gemini", "openai", "cloudflare", "puter", "pollinations", "manual"):
         cfg["imagen"]["motor"] = a.motor_imagen
     if a.motor_guion in ("gemini", "openai", "puter", "claude", "ollama", "manual"):
         cfg["guion"]["motor"] = a.motor_guion
@@ -629,7 +630,7 @@ def diagnostico():
     _yo()
     from motor import medios
     res = {"ffmpeg": bool(medios.FFMPEG), "gemini": gemini.hay_clave(),
-           "openai": openai_img.hay_clave()}
+           "openai": openai_img.hay_clave(), "cloudflare": cloudflare_img.hay_clave()}
     exe = shutil.which("claude")
     res["claude"] = False
     if exe:
@@ -753,6 +754,31 @@ def youtube_guardar(c: ClaveGemini):
         raise HTTPException(400, texto)
     nichos.guardar_clave(k)
     return {"ok": True, "texto": texto}
+
+
+class ClaveCloudflare(BaseModel):
+    cuenta: str
+    token: str
+
+
+@app.post("/api/cloudflare")
+def cloudflare_guardar(c: ClaveCloudflare):
+    """Account ID + token de Workers AI: se prueban (sin gastar neuronas) y, si valen, se guardan."""
+    _yo()
+    if not c.cuenta.strip() or not c.token.strip():
+        raise HTTPException(400, "Pega tu Account ID y tu token de Cloudflare.")
+    ok, texto = cloudflare_img.probar(c.cuenta, c.token)
+    if not ok:
+        raise HTTPException(400, texto)
+    cloudflare_img.guardar(c.cuenta, c.token)
+    return {"ok": True, "texto": texto, "modelos": {"imagen": "FLUX.2 [klein] 4B"}}
+
+
+@app.delete("/api/cloudflare")
+def cloudflare_olvidar():
+    _yo()
+    cloudflare_img.olvidar()
+    return {"ok": True}
 
 
 @app.get("/api/openai")

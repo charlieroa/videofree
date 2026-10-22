@@ -249,7 +249,7 @@
     <h2>Ajustes</h2>
     <div class="grupo">Claves de IA <span class="fila"><span id="estadoGemini" class="estado"></span><button id="cambiarGemini">Cambiar</button></span></div>
     <div class="grupo">Guion <select id="motorGuion"><option value="gemini">Gemini (automático)</option><option value="openai">OpenAI (automático)</option><option value="puter">Puter (gratis con tu cuenta)</option><option value="manual">ChatGPT a mano</option><option value="claude">Claude (tu suscripción)</option><option value="ollama">Ollama (local)</option></select></div>
-    <div class="grupo">Imágenes <select id="motorImagen"><option value="gemini">Gemini (con tu estilo y personajes iguales)</option><option value="openai">OpenAI gpt-image (de pago, la mejor calidad)</option><option value="puter">Puter (Gemini gratis con tu cuenta)</option><option value="pollinations">Pollinations (gratis, sin clave)</option><option value="manual">Las pego yo (ChatGPT…)</option></select></div>
+    <div class="grupo">Imágenes <select id="motorImagen"><option value="gemini">Gemini (con tu estilo y personajes iguales)</option><option value="openai">OpenAI gpt-image (de pago, la mejor calidad)</option><option value="cloudflare">Cloudflare FLUX.2 (gratis cada día)</option><option value="puter">Puter (Gemini gratis con tu cuenta)</option><option value="pollinations">Pollinations (gratis, sin clave)</option><option value="manual">Las pego yo (ChatGPT…)</option></select></div>
     <div class="grupo">Voz <select id="voz"></select></div>
     <div class="grupo">Clave Pollinations <span class="fila"><input id="token" type="password" placeholder="opcional, quita la marca de agua"><button id="guardarToken">Guardar</button></span></div>
   </div>
@@ -547,7 +547,7 @@ function pintarCfg() {
     const sel = $("#nVozCaja select"), elegida = sel.value;
     sel.innerHTML = opcionesVoz(elegida);              // al guardar la clave cambia «(necesita clave)»
   }
-  $("#estadoGemini").textContent = [config.gemini && "Gemini ✓", config.openai && "OpenAI ✓"].filter(Boolean).join(" · ") || "sin clave";
+  $("#estadoGemini").textContent = [config.gemini && "Gemini ✓", config.openai && "OpenAI ✓", config.cloudflare && "Cloudflare ✓"].filter(Boolean).join(" · ") || "sin clave";
   $("#motorGuion").value = config.motor_guion;
   $("#motorImagen").value = config.motor_imagen;
   $("#token").placeholder = config.token_pollinations ? "token guardado ✓" : "opcional, quita la marca de agua";
@@ -731,7 +731,7 @@ function pintar() {
   const dur = d.escenas.reduce((s, e) => s + (e.duracion || 0), 0);
   const faltanImg = d.escenas.filter(e => !e.imagen).length;
   const plan = est.motor === "pollinations" ? `${est.imagenes} imágenes por generar con Pollinations (~${est.minutos_imagenes} min)`
-    : ["gemini", "openai", "puter"].includes(est.motor) ? `${est.imagenes} imágenes por generar con ${{ openai: "OpenAI", gemini: "Gemini", puter: "Puter (gratis)" }[est.motor]} (~${est.minutos_imagenes} min)`
+    : ["gemini", "openai", "cloudflare", "puter"].includes(est.motor) ? `${est.imagenes} imágenes por generar con ${{ openai: "OpenAI", gemini: "Gemini", cloudflare: "Cloudflare FLUX.2 (gratis)", puter: "Puter (gratis)" }[est.motor]} (~${est.minutos_imagenes} min)`
     : est.motor === "manual" ? `${faltanImg} escenas esperan tu imagen`
     : est.motor === "fotos" ? `${est.imagenes} escenas con tus fotos` : "imágenes de prueba";
 
@@ -1138,7 +1138,7 @@ function progreso(d) {
 // ------------------------------------------------------------- crear vídeo (asistente)
 const MAGO = ["modo", "tema", "estilo", "voz", "listo"];
 let pasoMago = 0;
-const NOMBRE_MOTOR = { gemini: "Gemini (tu clave)", openai: "OpenAI (tu clave)", puter: "Gemini gratis con tu cuenta de Puter",
+const NOMBRE_MOTOR = { gemini: "Gemini (tu clave)", openai: "OpenAI (tu clave)", cloudflare: "FLUX.2 gratis cada día (tu cuenta de Cloudflare)", puter: "Gemini gratis con tu cuenta de Puter",
   pollinations: "Pollinations (gratis)", manual: "Lo pegas tú (ChatGPT)", claude: "Claude (tu suscripción)", ollama: "Ollama (local)", prueba: "De prueba" };
 function abrirMago(inicio = 0) {
   if (!sesion.usuario) return mostrarAcceso();
@@ -1206,14 +1206,23 @@ async function pintarAsistente() {
       <div id="diag"><p class="estado">Mirando…</p></div>`;
   } else if (nombre === "gemini") {
     proveedorAsis = proveedorAsis || (config.openai && !config.gemini ? "openai" : "gemini");
-    const oa = proveedorAsis === "openai", tiene = oa ? config.openai : config.gemini;
+    const oa = proveedorAsis === "openai", cf = proveedorAsis === "cloudflare";
+    const tiene = cf ? config.cloudflare : oa ? config.openai : config.gemini;
     html += `<h2>Tu clave de IA</h2>
       <p>Elige con qué IA salen solos el <b>guion</b> y las <b>imágenes</b> (con tu estilo y los mismos personajes en todo el vídeo). Puedes guardar las dos.</p>
       <div class="fila" style="margin-bottom:10px">
         <label class="opcion" style="flex:1"><input type="radio" name="provA" value="gemini" ${oa ? "" : "checked"}><span><b>Gemini</b><small>Google · gratis · guion y voz${config.gemini ? " · guardada ✓" : ""}</small></span></label>
         <label class="opcion" style="flex:1"><input type="radio" name="provA" value="openai" ${oa ? "checked" : ""}><span><b>OpenAI</b><small>ChatGPT · de pago (centavos por imagen) · guion e imágenes${config.openai ? " · guardada ✓" : ""}</small></span></label>
+        <label class="opcion" style="flex:1"><input type="radio" name="provA" value="cloudflare" ${cf ? "checked" : ""}><span><b>Cloudflare</b><small>Gratis cada día · imágenes FLUX.2 con tus personajes${config.cloudflare ? " · guardada ✓" : ""}</small></span></label>
       </div>
-      ${oa ? `<ol>
+      ${cf ? `<ol>
+        <li>Crea tu cuenta gratis en <a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noopener">dash.cloudflare.com</a> (sin tarjeta).</li>
+        <li>En el menú, entra en <b>AI → Workers AI</b> y pulsa <b>Use REST API</b>.</li>
+        <li>Copia tu <b>Account ID</b>, pulsa <b>Create a Workers AI API Token</b> y copia el token.</li>
+        <li>Pega los dos aquí y pulsa <b>Probar y guardar</b>.</li>
+      </ol>
+      <p class="ayuda">Gratis: 10.000 neuronas al día, unas 55-90 imágenes FLUX.2 con tu estilo y los mismos personajes. El cupo vuelve cada día; si se acaba a mitad de vídeo, el resto sale de Pollinations. El guion y la voz siguen con Gemini o Puter.</p>`
+      : oa ? `<ol>
         <li>Entra en <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a> con tu cuenta de OpenAI.</li>
         <li>Pulsa <b>Create new secret key</b> y cópiala (empieza por <code>sk-</code>).</li>
         <li>Pégala aquí y pulsa <b>Probar y guardar</b>.</li>
@@ -1226,7 +1235,8 @@ async function pintarAsistente() {
       </ol>
       <p class="ayuda">Con la capa gratis de Gemini salen el guion y la voz (Puck, Charon, Kore); para imágenes su cuota gratis es casi nula, así que sin OpenAI se usan las de Pollinations.</p>`}
       <p class="ayuda">La clave se guarda solo en este computador, en <code>secretos/</code>. Nunca se comparte ni se sube a internet. Pégala solo aquí, nunca en un chat.</p>
-      <label>Clave de ${oa ? "OpenAI" : "Gemini"}</label><input id="gClave" type="password" autocomplete="off" placeholder="${tiene ? "ya guardada ✓ (pega otra para cambiarla)" : "pega tu clave"}">
+      ${cf ? `<label>Account ID</label><input id="gCuenta" autocomplete="off" placeholder="${tiene ? "ya guardado ✓" : "32 letras y números"}">` : ""}
+      <label>${cf ? "Token de Workers AI" : `Clave de ${oa ? "OpenAI" : "Gemini"}`}</label><input id="gClave" type="password" autocomplete="off" placeholder="${tiene ? "ya guardada ✓ (pega otra para cambiarla)" : "pega tu clave"}">
       <div class="fila" style="margin-top:10px"><button class="primario" id="gProbar">Probar y guardar</button>
         ${tiene ? `<button id="gOlvidar">Borrar la clave</button>` : ""}</div>
       <p class="estado" id="gEstado">${tiene ? "✓ Clave guardada." : "Sin clave también funciona: guion, imágenes y voces de Gemini gratis con tu cuenta de Puter (se conecta al crear el vídeo)."}</p>`;
@@ -1243,7 +1253,7 @@ async function pintarAsistente() {
   }
   html += `<div class="navegar">
       <button id="asisAtras" ${paso === 0 ? "disabled" : ""}>Atrás</button>
-      <div class="fila">${nombre === "gemini" && !config.gemini && !config.openai ? `<button id="asisSaltar">Seguir sin clave</button>` : ""}
+      <div class="fila">${nombre === "gemini" && !config.gemini && !config.openai && !config.cloudflare ? `<button id="asisSaltar">Seguir sin clave</button>` : ""}
       <button class="primario" id="asisSig">${paso === PASOS_ASIS.length - 1 ? "Empezar" : "Siguiente"}</button></div></div>`;
   caja.innerHTML = html;
 
@@ -1267,21 +1277,24 @@ async function pintarAsistente() {
       chk(diag.ffmpeg, "Motor de vídeo (ffmpeg) incluido", "Falta ffmpeg") +
       chk(diag.voz, "Voz Jorge (gratis) funcionando", "La voz no responde: revisa tu conexión") +
       chk(diag.internet, "Conexión con internet", "Sin conexión: hace falta para la voz y las imágenes") +
-      chk(diag.gemini || diag.openai, `Clave de ${[diag.gemini && "Gemini", diag.openai && "OpenAI"].filter(Boolean).join(" y ")} guardada`, "Sin clave de IA todavía (Gemini u OpenAI): se pega en el paso siguiente") +
+      chk(diag.gemini || diag.openai || diag.cloudflare, `Clave de ${[diag.gemini && "Gemini", diag.openai && "OpenAI", diag.cloudflare && "Cloudflare"].filter(Boolean).join(", ")} guardada`, "Sin clave de IA todavía (Gemini u OpenAI): se pega en el paso siguiente") +
       (diag.claude ? chk(true, "Claude detectado (alternativa para el guion, en Ajustes)") : "") +
       (diag.ollama && diag.ollama.length ? chk(true, `Ollama detectado: ${esc(diag.ollama.join(", "))} (alternativa para el guion)`) : "");
   }
   if (nombre === "gemini") {
-    const oa = proveedorAsis === "openai", ruta = oa ? "/api/openai" : "/api/gemini", quien = oa ? "OpenAI" : "Gemini";
+    const oa = proveedorAsis === "openai", cf = proveedorAsis === "cloudflare";
+    const ruta = cf ? "/api/cloudflare" : oa ? "/api/openai" : "/api/gemini", quien = cf ? "Cloudflare" : oa ? "OpenAI" : "Gemini";
     caja.querySelectorAll('input[name="provA"]').forEach(r => r.onchange = () => { proveedorAsis = r.value; pintarAsistente(); });
     $("#gProbar").onclick = async () => {
       const clave = $("#gClave").value.trim();
-      if (!clave) return $("#gEstado").textContent = (oa ? config.openai : config.gemini) ? "✓ Ya tienes una clave guardada." : "Pega primero tu clave.";
+      if (!clave) return $("#gEstado").textContent = (cf ? config.cloudflare : oa ? config.openai : config.gemini) ? "✓ Ya tienes una clave guardada." : "Pega primero tu clave.";
       $("#gEstado").textContent = `Probando con ${quien}…`;
       try {
-        const r = await api(ruta, { method: "POST", body: JSON.stringify({ clave }) });
+        const cuerpo = cf ? { cuenta: $("#gCuenta").value.trim(), token: clave } : { clave };
+        const r = await api(ruta, { method: "POST", body: JSON.stringify(cuerpo) });
         const cambio = {};
-        if (oa) { cambio.motor_guion = "openai"; cambio.motor_imagen = "openai"; }
+        if (cf) cambio.motor_imagen = "cloudflare";
+        else if (oa) { cambio.motor_guion = "openai"; cambio.motor_imagen = "openai"; }
         else {
           if (config.motor_guion === "manual") cambio.motor_guion = "gemini";
           if (config.motor_imagen === "pollinations") cambio.motor_imagen = "gemini";
@@ -1289,7 +1302,8 @@ async function pintarAsistente() {
         await guardarCfg(cambio);
         voces = await api("/api/voces"); pintarCfg();
         pintarAsistente();
-        $("#gEstado").textContent = `✓ Clave válida y guardada. Guion: ${r.modelos.texto} · voz: ${r.modelos.voz || "Jorge"} · imágenes: ${r.modelos.imagen}`;
+        $("#gEstado").textContent = cf ? `✓ Cuenta válida y guardada. Imágenes gratis cada día con ${r.modelos.imagen}.`
+          : `✓ Clave válida y guardada. Guion: ${r.modelos.texto} · voz: ${r.modelos.voz || "Jorge"} · imágenes: ${r.modelos.imagen}`;
       } catch (e) { $("#gEstado").textContent = "✗ " + e.message; }
     };
     if ($("#gOlvidar")) $("#gOlvidar").onclick = async () => {

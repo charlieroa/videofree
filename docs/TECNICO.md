@@ -109,6 +109,19 @@ girarla según el EXIF), con la proporción final (1:1 o 16:9). Puede salirse de
 < 1): el hueco se rellena con la foto ampliada, desenfocada y oscurecida. Solo se reescala el
 trozo que cae dentro, no la foto entera. Sin `recorte`, el encuadre automático de siempre.
 
+## Imágenes gratis cada día (Cloudflare Workers AI)
+
+`motor/cloudflare_img.py`: FLUX.2 [klein] 4B (`@cf/black-forest-labs/flux-2-klein-4b`) con la
+cuenta de Cloudflare de la persona (`cf_cuenta` + `cf_token`). POST multipart a
+`/accounts/<cuenta>/ai/run/<modelo>` con `prompt`, `width`/`height` (1280×720 por defecto,
+`config.json → cloudflare`), `seed` e `input_image_0..3` (las referencias, reducidas a menos de
+512×512). Pasos fijos en 4. Devuelve base64.
+
+Plan gratis: 10.000 neuronas/día (00:00 UTC). klein 4B = 26,05 por trozo de 512×512 de salida
++ 5,37 por referencia → ~110-180 por imagen 1280×720 → 55-90 imágenes/día. Cupo gastado →
+`ErrorCuota` → Pollinations. Si hay clave de OpenAI se prefiere OpenAI; si no, Cloudflare va
+antes que Gemini (sin facturación, Gemini no da imágenes) y que Puter.
+
 ## Guion e imágenes sin clave (Puter)
 
 Sin clave de Gemini ni de OpenAI, `guion.motor_efectivo()` e `imagenes.motor_efectivo()`

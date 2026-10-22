@@ -79,6 +79,11 @@ Charon y Kore salen de tu cuenta gratis de [Puter](https://puter.com): lo hace t
 así que deja abierta la pestaña del vídeo mientras trabaja. Si se acaban los créditos de
 Puter, las imágenes siguen con Pollinations y puedes cambiar a una voz gratis.
 
+**Imágenes gratis de calidad cada día: Cloudflare.** En el Asistente (paso 2) elige
+**Cloudflare**: con una cuenta gratis (sin tarjeta) y un token de Workers AI salen unas 55-90
+imágenes FLUX.2 al día con tu estilo y los mismos personajes (acepta tu imagen de ejemplo, la
+hoja de personajes y tus fotos como referencia). El cupo se renueva cada día a las 00:00 UTC.
+
 Los detalles de cada paso:
 
 1. En el panel de la izquierda, en **🎙 Voz**, elige la voz.

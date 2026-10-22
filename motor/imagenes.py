@@ -12,6 +12,9 @@ Formas de conseguirla (config.json -> imagen.motor, o cada escena a mano):
                 por imagen). Mismas referencias que Gemini: imagen de ejemplo y
                 hoja de personajes. Si hay clave de OpenAI se prefiere a Gemini,
                 porque la capa gratis de Gemini no da cuota de imagenes.
+  cloudflare    FLUX.2 [klein] GRATIS cada dia con la cuenta de Cloudflare de la
+                persona (motor/cloudflare_img.py, ~55-90 imagenes/dia). Lleva las
+                mismas referencias (hasta 4). Gastado el cupo, Pollinations.
   puter         Gemini imagen GRATIS con la cuenta de Puter de la persona: la genera
                 su navegador (motor/navegador.py). Es lo que se usa sin ninguna
                 clave. Mismas referencias que Gemini. Sin creditos o sin la pestaña
@@ -50,7 +53,7 @@ import urllib.parse
 import requests
 from PIL import Image, ImageDraw, ImageFont
 
-from . import gemini, navegador, openai_img, proyecto
+from . import cloudflare_img, gemini, navegador, openai_img, proyecto
 
 _ultima_llamada = [0.0]
 
@@ -252,17 +255,19 @@ def _asegurar_hoja(datos, avisar):
     return destino
 
 
-_NOMBRE = {"gemini": "Gemini", "openai": "OpenAI", "puter": "Puter", "pollinations": "Pollinations"}
-_ERRORES = (gemini.ErrorGemini, openai_img.ErrorOpenAI, navegador.ErrorNavegador)
-_CUOTA = (gemini.ErrorCuota, openai_img.ErrorCuota, navegador.SinCreditos, navegador.SinRespuesta)
-_IA = ("gemini", "openai", "puter")
+_NOMBRE = {"gemini": "Gemini", "openai": "OpenAI", "cloudflare": "Cloudflare (FLUX.2)", "puter": "Puter",
+           "pollinations": "Pollinations"}
+_ERRORES = (gemini.ErrorGemini, openai_img.ErrorOpenAI, cloudflare_img.ErrorCloudflare, navegador.ErrorNavegador)
+_CUOTA = (gemini.ErrorCuota, openai_img.ErrorCuota, cloudflare_img.ErrorCuota, navegador.SinCreditos,
+          navegador.SinRespuesta)
+_IA = ("gemini", "openai", "cloudflare", "puter")
 
 
 def _ia(motor, datos):
     """Lo que dibuja: los tres tienen imagen(prompt, destino, referencias, avisar)."""
     if motor == "puter":
         return navegador.Imagenes(datos)
-    return openai_img if motor == "openai" else gemini
+    return {"openai": openai_img, "cloudflare": cloudflare_img}.get(motor, gemini)
 
 
 def _con_ia(datos, e, destino, avisar, nota, hoja, motor):
@@ -283,15 +288,19 @@ def _con_ia(datos, e, destino, avisar, nota, hoja, motor):
 # ------------------------------------------------------------- el paso
 
 def motor_efectivo(datos=None):
-    """El motor que de verdad se usa. Con «gemini» (el de serie) y clave de OpenAI,
-    OpenAI: la capa gratis de Gemini da cuota 0 de imagenes. Sin ninguna clave,
-    Puter (gratis, en el navegador)."""
+    """El motor que de verdad se usa. Con «gemini» (el de serie): OpenAI si hay su
+    clave (la capa gratis de Gemini no da imagenes), si no Cloudflare (gratis cada
+    dia), si no Gemini con su clave, y sin nada Puter (gratis, en el navegador)."""
     if datos and datos.get("simular"):
         return "prueba"
     motor = proyecto.config()["imagen"]["motor"]
+    if motor == "cloudflare":
+        return "cloudflare" if cloudflare_img.hay_clave() else "puter"
     if motor in ("gemini", "openai"):
         if openai_img.hay_clave():
             return "openai"
+        if cloudflare_img.hay_clave():
+            return "cloudflare"
         if motor == "gemini" and gemini.hay_clave():
             return "gemini"
         return "puter"
@@ -491,7 +500,7 @@ def estimar(datos):
         return {"imagenes": faltan, "minutos_imagenes": 0, "motor": "fotos",
                 "simular": bool(datos.get("simular"))}
     if motor in _IA:
-        por_imagen = {"gemini": 15, "openai": 30, "puter": 20}[motor]
+        por_imagen = {"gemini": 15, "openai": 30, "cloudflare": 8, "puter": 20}[motor]
     else:
         por_imagen = 8 if proyecto.secretos().get("pollinations_token") else cfg["espera_s"]
     return {"imagenes": faltan,

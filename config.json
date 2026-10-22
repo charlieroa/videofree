@@ -19,6 +19,12 @@
     "semilla": 1234,
     "espera_s": 46
   },
+  "cloudflare": {
+    "_nota": "Imagenes gratis cada dia con FLUX.2 [klein] 4B (10.000 neuronas/dia). Mas grande = mas nitida pero menos imagenes al dia.",
+    "ancho": 1280,
+    "alto": 720,
+    "semilla": 1234
+  },
   "gemini": {
     "_nota": "Modelos de Gemini. 'auto' = el mas nuevo que liste la API para tu clave. La voz va fija porque el TTS mas nuevo tiene la cuota gratis minima.",
     "modelo_texto": "auto",
