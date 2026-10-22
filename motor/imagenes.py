@@ -64,15 +64,34 @@ class ErrorImagen(Exception):
 
 # ---------------------------------------------------------------- prompts
 
-def prompt_de(datos, e):
+ESTILO_DE_LA_REFERENCIA = ("exactly the art style of the STYLE reference image: same drawing technique, "
+                           "line work, shading, color palette, lighting and background treatment")
+
+
+def estilo(datos, con_referencia=False):
+    """La frase de estilo de cada imagen.
+
+    Medido (22-10-2026, «La vida de Jesus»): si el guion lo escribio un modelo que NO
+    vio la imagen de ejemplo, su estilo_visual es inventado («soft cinematic lighting»)
+    y le gana a la referencia: salieron fotos realistas en vez del dibujo pedido. En
+    ese caso, cuando la imagen lleva la referencia, se pide copiar la referencia.
+    """
+    b = datos.get("biblia") or {}
+    propio = b.get("estilo_visual", "")
+    if con_referencia and not b.get("estilo_de_referencia"):
+        return ESTILO_DE_LA_REFERENCIA + (f"; {datos['estilo']}" if datos.get("estilo") else "")
+    return propio
+
+
+def prompt_de(datos, e, con_referencia=False):
     b = datos.get("biblia") or {}
     partes = [e["visual"]]
     todos = {p.get("nombre"): p.get("descripcion_visual", "") for p in b.get("personajes", [])}
     pj = [f"{n}: {todos[n]}" for n in e.get("personajes", []) if n in todos]
     if pj:
         partes.append("Characters: " + "; ".join(pj))
-    if b.get("estilo_visual"):
-        partes.append(f"Style: {b['estilo_visual']}")
+    if estilo(datos, con_referencia):
+        partes.append(f"Style: {estilo(datos, con_referencia)}")
     partes.append("16:9 cinematic frame, no text, no letters, no watermark")
     return ". ".join(p.strip(". ") for p in partes)
 
@@ -167,7 +186,7 @@ def firma_hoja(datos):
     return hashlib.sha1(base.encode("utf-8")).hexdigest()[:12]
 
 
-def prompt_hoja(datos):
+def prompt_hoja(datos, con_referencia=False):
     b = datos.get("biblia") or {}
     pj = _personajes(datos)
     lista = "; ".join(f"{p['nombre']}: {p['descripcion_visual']}" for p in pj)
@@ -175,8 +194,8 @@ def prompt_hoja(datos):
     texto = (f"Character reference sheet, {cuantos}, each one full body, standing, facing the "
              f"viewer, neutral friendly expression, whole figure visible from head to feet. "
              f"Characters: {lista}. Plain flat light grey background, nothing else in the image. ")
-    if b.get("estilo_visual"):
-        texto += f"Style: {b['estilo_visual']}. "
+    if estilo(datos, con_referencia):
+        texto += f"Style: {estilo(datos, con_referencia)}. "
     texto += "No text, no labels, no letters, no watermark"
     return texto[:2000]
 
@@ -188,7 +207,7 @@ def usa_hoja(datos, e):
 
 def prompt_escena(datos, e, nota="", con_hoja=False, con_estilo=False):
     """El prompt de una escena para Gemini, diciendo para que sirve cada referencia."""
-    base = prompt_de(datos, e)
+    base = prompt_de(datos, e, con_estilo)
     if con_estilo and con_hoja:
         guia = "Reference images: the first is the STYLE example, the second is the CHARACTER SHEET. "
     elif con_estilo:
@@ -242,7 +261,7 @@ def _asegurar_hoja(datos, avisar):
         return proyecto.absoluta(datos, datos["hoja"])
     ref = referencia(datos)
     avisar(f"{_NOMBRE.get(motor_efectivo(datos), 'La IA')} dibuja la hoja de personajes" + (" (con tu imagen de ejemplo)" if ref else "") + "...")
-    prompt = prompt_hoja(datos)
+    prompt = prompt_hoja(datos, bool(ref))
     if ref:
         prompt = ("Reference image: the STYLE example. Copy only its visual style (technique, "
                   "palette, lighting); do not copy its subject. " + prompt)
@@ -476,7 +495,16 @@ def ejecutar(datos, avisar, solo=None, nota=""):
         if motor in _NOMBRE:
             avisar(f"Imagen escena {e['n']} ({i}/{len(pendientes)}) con {_NOMBRE[motor]}")
         try:
-            generar_una(datos, e, avisar, nota, motor, hoja)
+            try:
+                generar_una(datos, e, avisar, nota, motor, hoja)
+            except cloudflare_img.ErrorFiltro:
+                avisar(f"El filtro de Cloudflare rechazó la escena {e['n']}: pruebo una versión simbólica.")
+                try:
+                    generar_una(datos, e, avisar, (nota + ". " if nota else "") + SUAVE, motor, hoja)
+                except cloudflare_img.ErrorFiltro:
+                    if _reusar_anterior(datos, e, avisar):
+                        continue
+                    raise
         except _CUOTA as err:
             avisar(f"{err} Sigo con Pollinations.")
             motor = "pollinations"
@@ -488,6 +516,24 @@ def ejecutar(datos, avisar, solo=None, nota=""):
     proyecto.guardar(datos)
     avisar("Imagenes listas." if all(e["imagen"] for e in datos["escenas"])
            else "Faltan imagenes en algunas escenas.")
+
+
+SUAVE = ("Peaceful, symbolic and respectful depiction suitable for all ages: no blood, no wounds, "
+         "no violence, no nudity; suggest the moment with light, silhouettes and expressions")
+
+
+def _reusar_anterior(datos, e, avisar):
+    """La escena que el filtro no deja dibujar se queda con la imagen de la anterior
+    (el montaje le da otro movimiento): mejor que una imagen de otro estilo."""
+    previas = [x for x in datos["escenas"] if x["n"] < e["n"] and x.get("imagen")]
+    if not previas:
+        return False
+    e["imagen"], e["propia"] = previas[-1]["imagen"], False
+    proyecto.quitar_clip(e)
+    datos["mp4"] = None
+    proyecto.guardar(datos)
+    avisar(f"Escena {e['n']}: el filtro no la deja; uso la imagen de la escena {previas[-1]['n']}.")
+    return True
 
 
 def estimar(datos):

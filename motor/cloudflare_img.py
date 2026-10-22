@@ -52,6 +52,10 @@ class ErrorCuota(ErrorCloudflare):
     pass
 
 
+class ErrorFiltro(ErrorCloudflare):
+    """El filtro de contenido de Cloudflare rechazo la imagen (codigo 3030)."""
+
+
 # --------------------------------------------------------------- la clave
 
 def credenciales():
@@ -216,8 +220,8 @@ def _mensaje(r):
         return ErrorCuota("Se acabó el cupo gratis de hoy de Cloudflare (10.000 neuronas; vuelve a "
                           "las 00:00 UTC).")
     if "3030" in texto or "flagged" in bajo:
-        return ErrorCloudflare("Cloudflare rechazó esa imagen por su filtro de contenido. "
-                               "Cambia la descripción de la escena.")
+        return ErrorFiltro("Cloudflare rechazó esa imagen por su filtro de contenido. "
+                           "Cambia la descripción de la escena.")
     return ErrorCloudflare(f"Cloudflare ({r.status_code}): {texto}")
 
 

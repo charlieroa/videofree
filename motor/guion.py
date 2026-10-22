@@ -327,6 +327,10 @@ def ejecutar(datos, avisar):
             avisar(f"{nombre} escribe el guion ({escenas} escenas)...")
             g = llamar(prompt)
     aplicar(datos, g)
+    # ¿El estilo_visual lo escribio alguien que VIO la imagen de ejemplo? Pollinations,
+    # Claude y Ollama no la ven: entonces su estilo es inventado y no debe mandar.
+    datos["biblia"]["estilo_de_referencia"] = bool(imagenes.referencia(datos)
+                                                   and motor in ("gemini", "openai", "puter"))
     avisar(f"Guion listo: {len(datos['escenas'])} escenas.")
 
 
