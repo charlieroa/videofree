@@ -23,6 +23,14 @@ Formas de conseguirla (config.json -> imagen.motor, o cada escena a mano):
 Y en cualquier escena, con cualquier motor, la persona puede subir o pegar SU
 imagen: queda marcada como propia y «Imagenes» / «Hacer todo» no la pisan.
 
+TUS FOTOS del video (imagenes/fotos/, las sube la persona de una vez):
+  fotos_modo = "referencia"  la IA (Gemini u OpenAI) las ve en cada escena y
+                             saca su producto, su cara o su local tal cual.
+  fotos_modo = "escenas"     no se genera nada: las fotos SON las imagenes, en
+                             orden y repartidas entre las escenas (varias escenas
+                             seguidas comparten foto; el montaje les da otro
+                             movimiento de camara).
+
 Como se parecen entre si: el prompt de cada imagen lleva SIEMPRE el mismo
 estilo y la misma descripcion de cada personaje (la «biblia» del guion), y con
 Gemini ademas la hoja de personajes como imagen. Las escenas 'continua' no piden
@@ -254,7 +262,15 @@ def _con_ia(datos, e, destino, avisar, nota, hoja, motor):
     ref = referencia(datos)
     con_hoja = bool(hoja and usa_hoja(datos, e))
     refs = ([ref] if ref else []) + ([hoja] if con_hoja else [])
-    _ia(motor).imagen(prompt_escena(datos, e, nota, con_hoja, bool(ref)), destino, refs, avisar)
+    prompt = prompt_escena(datos, e, nota, con_hoja, bool(ref))
+    mias = fotos(datos)[:MAX_FOTOS_REFERENCIA] if datos.get("fotos_modo") != "escenas" else []
+    if mias:
+        orden = "after the other references" if refs else "attached"
+        prompt = (f"The {len(mias)} photo(s) {orden} are the user's OWN PHOTOS (their product, "
+                  f"person, place or brand). When the scene shows that subject, reproduce it "
+                  f"faithfully from those photos (shape, colors, logo, face); adapt pose, angle "
+                  f"and background to the scene. " + prompt)[:2500]
+    _ia(motor).imagen(prompt, destino, refs + mias, avisar)
 
 
 # ------------------------------------------------------------- el paso
@@ -327,6 +343,70 @@ def pegar(datos, e, data_url):
     proyecto.guardar(datos)
 
 
+# ----------------------------------------------------------- tus fotos
+
+MAX_FOTOS = 30
+MAX_FOTOS_REFERENCIA = 2       # con la de estilo y la hoja suman 4 (el tope de OpenAI)
+
+
+def _carpeta_fotos(datos):
+    c = _carpeta(datos) / "fotos"
+    c.mkdir(exist_ok=True)
+    return c
+
+
+def fotos(datos):
+    return [r for r in (proyecto.absoluta(datos, f) for f in datos.get("fotos") or []) if r.is_file()]
+
+
+def agregar_fotos(datos, data_urls):
+    lista = list(datos.get("fotos") or [])
+    if len(lista) + len(data_urls) > MAX_FOTOS:
+        raise ErrorImagen(f"como mucho {MAX_FOTOS} fotos por vídeo")
+    base = int(time.time() * 1000)
+    for i, url in enumerate(data_urls):
+        destino = _guardar_data_url(url, _carpeta_fotos(datos) / f"foto_{base}_{i:02d}")
+        lista.append(proyecto.relativa(datos, destino))
+    datos["fotos"] = lista
+    datos["fotos_modo"] = datos.get("fotos_modo") or "referencia"
+    proyecto.guardar(datos)
+
+
+def quitar_foto(datos, i):
+    lista = list(datos.get("fotos") or [])
+    if not 0 <= i < len(lista):
+        raise ErrorImagen("esa foto no existe")
+    rel = lista.pop(i)
+    proyecto.absoluta(datos, rel).unlink(missing_ok=True)
+    for e in datos["escenas"]:                 # las escenas que la usaban vuelven a quedar sin imagen
+        if e.get("imagen") == rel:
+            e["imagen"], e["propia"] = None, False
+            proyecto.quitar_clip(e)
+            datos["mp4"] = None
+    datos["fotos"] = lista
+    proyecto.guardar(datos)
+
+
+def modo_fotos(datos, modo):
+    if modo not in ("referencia", "escenas"):
+        raise ErrorImagen("modo de fotos desconocido")
+    datos["fotos_modo"] = modo
+    proyecto.guardar(datos)
+
+
+def _repartir_fotos(datos, pendientes, avisar):
+    """Modo «escenas»: cada escena pendiente recibe una de TUS fotos, en orden."""
+    mias = datos.get("fotos") or []
+    propias = [e for e in datos["escenas"] if not e["continua"]]
+    for e in pendientes:
+        i = propias.index(e) * len(mias) // len(propias)      # reparto parejo y en orden
+        e["imagen"] = mias[i]
+        e["propia"] = True
+        proyecto.quitar_clip(e)
+    datos["mp4"] = None
+    avisar(f"Tus {len(mias)} fotos repartidas en {len(pendientes)} escenas.")
+
+
 def poner_referencia(datos, data_url):
     """La IMAGEN DE EJEMPLO del estilo (o quitarla con data_url vacio)."""
     for viejo in _carpeta(datos).glob("referencia.*"):
@@ -359,6 +439,13 @@ def ejecutar(datos, avisar, solo=None, nota=""):
     if motor == "manual" and not solo:
         avisar(f"Motor manual: pega tus imagenes en las {len(pendientes)} escenas que faltan.")
     nota = nota if solo else ""
+    if datos.get("fotos_modo") == "escenas" and fotos(datos):
+        _repartir_fotos(datos, pendientes, avisar)
+        resolver_continuas(datos)
+        proyecto.guardar(datos)
+        avisar("Imagenes listas." if all(e["imagen"] for e in datos["escenas"])
+               else "Faltan imagenes en algunas escenas.")
+        return
     hoja = None
     if motor in ("gemini", "openai") and any(usa_hoja(datos, e) for e in pendientes):
         try:
@@ -393,6 +480,9 @@ def estimar(datos):
         n = max(3, round(datos["minutos"] * 60 / proyecto.config()["guion"]["segundos_por_escena"]))
         faltan = round(n * 0.7)
     motor = motor_efectivo(datos)
+    if datos.get("fotos_modo") == "escenas" and datos.get("fotos"):
+        return {"imagenes": faltan, "minutos_imagenes": 0, "motor": "fotos",
+                "simular": bool(datos.get("simular"))}
     if motor in ("gemini", "openai"):
         por_imagen = 15 if motor == "gemini" else 30
     else:

@@ -60,7 +60,7 @@ se abre el **asistente**:
 4. **Listo.**
 
 La clave se guarda **solo en tu PC**, en `secretos/`, que nunca se sube al repositorio.
-Pégala solo en la app, nunca en un chat. Puedes cambiarla cuando quieras en **Ajustes → Clave Gemini**.
+Pégala solo en la app, nunca en un chat. Puedes cambiarla cuando quieras en **Ajustes → Claves de IA**.
 
 ### 4. Hacer tu primer vídeo
 
@@ -68,12 +68,20 @@ Pégala solo en la app, nunca en un chat. Puedes cambiarla cuando quieras en **A
 2. Llena **Título**, **Tema** (pega un texto, un resumen o tus ideas) y **Minutos**.
 3. **Línea gráfica**: escribe el estilo (p. ej. «ilustración acuarela, colores cálidos») y/o
    **sube una imagen de ejemplo**: todas las imágenes copiarán su estilo, no su contenido.
+   **Tus fotos** (opcional, varias a la vez: tu producto, tu cara, tu local…). Elige cómo se usan:
+   - **La IA crea las imágenes a partir de ellas**: Gemini u OpenAI las ven en cada escena y sacan
+     tu producto o tu cara tal cual, en la situación que pida el guion.
+   - **Usar mis fotos tal cual**: no se genera ninguna imagen; tus fotos se reparten en orden entre
+     las escenas y el efecto 3D las anima.
 4. Elige el **Tono** (humor, documental, infantil, inspirador, misterio…).
 5. Deja marcado **«Hacerlo todo solo al crear»** y pulsa **Crear**. El registro de abajo dice
    en qué va.
 6. ¿Una escena no te gusta? Pulsa **Subir mi imagen** (o **Ctrl+V** con el ratón encima) y pon
    la tuya. Queda marcada **Tu imagen** y no se vuelve a generar. Luego pulsa **4 · Animar y montar MP4**.
 7. Cuando diga **Listo**, pulsa **Descargar MP4**. Cuando lo subas a YouTube, márcalo como publicado.
+
+¿No sabes de qué hacer el vídeo? Mira **🔥 Nichos** (abajo) y pulsa **Usar este tema**: rellena
+el vídeo nuevo y la IA escribe un guion propio sobre ese tema.
 
 Sin clave, el guion se hace con ChatGPT: la app te da el prompt, lo pegas en ChatGPT y pegas su
 respuesta. Después pulsa **Hacer todo**.
@@ -82,7 +90,9 @@ Si es tu primera vez, marca **Modo prueba**: arma el vídeo en segundos sin IA, 
 
 ### 5. Tu canal: foto de perfil y banner
 
-Arriba, en **📺 Mi canal**, sube una foto cualquiera y sale con las medidas de YouTube:
+Arriba, en **📺 Mi canal**, sube una foto cualquiera y **encuádrala**: arrástrala y usa el zoom
+(o la rueda del ratón). En el banner ves la zona del ordenador y la zona segura del móvil, para
+que tu nombre o tu cara queden dentro. **Automático** la ajusta sola. Sale con las medidas de YouTube:
 
 | | Medida | Cómo se ajusta |
 |---|---|---|
@@ -90,6 +100,25 @@ Arriba, en **📺 Mi canal**, sube una foto cualquiera y sale con las medidas de
 | Banner | **2560 × 1440**, máx. 6 MB. Zona segura **1546 × 423** | Si la foto es ancha, la llena. Si no, la pone entera en la zona segura sobre un fondo desenfocado |
 
 Descárgalas y súbelas en **YouTube Studio → Personalización → Branding**.
+
+### 6. Nichos: de qué hacer vídeos
+
+Arriba, en **🔥 Nichos**, ves qué temas están dando vistas **ahora** en YouTube en español: 15
+nichos que encajan con vídeos narrados (historia, misterio, devocional, finanzas, cuentos…) y un
+buscador para cualquier tema. Para cada uno mira los vídeos largos más vistos del último mes:
+
+| Dato | Qué significa |
+|---|---|
+| **Vistas/día** | Cuánta gente lo busca (demanda) |
+| **Subs típicos** | Tamaño de los canales que salen (competencia) |
+| **Sorpresas** | % de vídeos de canales pequeños (< 50 mil subs) con más vistas que suscriptores. Alto = el nicho premia el contenido, no el tamaño del canal |
+
+Abajo, **Tendencias de hoy**: lo más visto hoy en tu país, por categoría.
+
+Necesita una clave **gratis** de la YouTube Data API: en
+[console.cloud.google.com](https://console.cloud.google.com/apis/library/youtube.googleapis.com)
+pulsa **Habilitar**, luego **Credenciales → Crear credenciales → Clave de API**, y pégala en la
+pantalla de Nichos. Da 10.000 unidades al día; mirar un nicho gasta ~100 y queda guardado todo el día.
 
 ---
 

@@ -25,7 +25,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from motor import canal, gemini, guion, imagenes, montaje, openai_img, proyecto, usuarios, voz
+from motor import canal, gemini, guion, imagenes, montaje, nichos, openai_img, proyecto, usuarios, voz
 
 app = FastAPI(title="Video Simple")
 WEB = proyecto.RAIZ / "web"
@@ -148,6 +148,8 @@ class Nuevo(BaseModel):
     voz: str = ""
     movimiento: bool = False
     referencia: str = ""        # imagen de ejemplo del estilo (data URL), opcional
+    fotos: list[str] = []       # TUS fotos (data URLs): referencia para la IA o las imagenes mismas
+    fotos_modo: str = "referencia"
     auto: bool = True           # lanzar «Hacer todo» al crear
 
 
@@ -267,6 +269,7 @@ def archivo(pid: str, ruta: str):
 
 class ImagenCanal(BaseModel):
     imagen: str             # data URL (lo que da FileReader)
+    recorte: dict | None = None     # {x, y, w, h} en fracciones de la foto: el encuadre a mano
 
 
 @app.get("/api/canal")
@@ -291,7 +294,7 @@ def subir_canal(tipo: str, b: ImagenCanal):
     if len(crudo) > 25 * 1024 * 1024:
         raise HTTPException(400, "La imagen pesa más de 25 MB.")
     try:
-        return canal.guardar(tipo, crudo)
+        return canal.guardar(tipo, crudo, b.recorte)
     except ValueError as err:
         raise HTTPException(400, str(err))
 
@@ -408,6 +411,12 @@ def nuevo(n: Nuevo):
             imagenes.poner_referencia(datos, n.referencia)
         except Exception as err:
             raise HTTPException(400, f"No he podido usar la imagen de ejemplo: {err}")
+    if n.fotos:
+        try:
+            imagenes.agregar_fotos(datos, n.fotos)
+            imagenes.modo_fotos(datos, n.fotos_modo)
+        except Exception as err:
+            raise HTTPException(400, f"No he podido usar tus fotos: {err}")
     # Flujo automatico: si el guion lo escribe una IA, se lanza todo de una vez.
     if n.auto and guion.motor_efectivo(datos) != "manual":
         _arrancar(datos["id"], "todo")
@@ -513,6 +522,41 @@ def poner_referencia(pid: str, r: Referencia):
     return ver(pid)
 
 
+class Fotos(BaseModel):
+    imagenes: list[str] = []    # data URLs para añadir
+    modo: str = ""              # "referencia" | "escenas"
+
+
+@app.post("/api/proyectos/{pid}/fotos")
+def poner_fotos(pid: str, f: Fotos):
+    """Añadir fotos tuyas al vídeo y/o cambiar cómo se usan."""
+    _mio(pid)
+    if _ocupado(pid):
+        raise HTTPException(409, "Hay un trabajo en marcha.")
+    datos = _mio(pid)
+    try:
+        if f.imagenes:
+            imagenes.agregar_fotos(datos, f.imagenes)
+        if f.modo:
+            imagenes.modo_fotos(datos, f.modo)
+    except Exception as err:
+        raise HTTPException(400, f"No he podido usar esas fotos: {err}")
+    return ver(pid)
+
+
+@app.delete("/api/proyectos/{pid}/fotos/{i}")
+def quitar_foto(pid: str, i: int):
+    _mio(pid)
+    if _ocupado(pid):
+        raise HTTPException(409, "Hay un trabajo en marcha.")
+    datos = _mio(pid)
+    try:
+        imagenes.quitar_foto(datos, i)
+    except Exception as err:
+        raise HTTPException(400, str(err))
+    return ver(pid)
+
+
 def _arrancar(pid, paso, solo=None, nota=""):
     datos = proyecto.leer(pid)
     datos["trabajo"] = {"paso": paso, "inicio": time.strftime("%H:%M:%S")}
@@ -615,6 +659,56 @@ def gemini_olvidar():
     _yo()
     gemini.olvidar_clave()
     return {"ok": True}
+
+
+# ----------------------------------------------------------- nichos de YouTube
+
+def _nichos(hacer):
+    _yo()
+    try:
+        return hacer()
+    except nichos.ErrorNichos as err:
+        raise HTTPException(400, str(err))
+
+
+@app.get("/api/nichos")
+def ver_nichos():
+    return _nichos(lambda: {"clave": bool(nichos.clave()), "propia": nichos.tiene_clave_propia(),
+                            "nichos": nichos.catalogo()})
+
+
+@app.get("/api/nichos/{nid}")
+def ver_nicho(nid: str, forzar: bool = False):
+    return _nichos(lambda: nichos.nicho(nid, forzar))
+
+
+class Busqueda(BaseModel):
+    consulta: str
+    forzar: bool = False
+
+
+@app.post("/api/nichos/buscar")
+def buscar_nicho(b: Busqueda):
+    return _nichos(lambda: nichos.analizar(b.consulta, forzar=b.forzar))
+
+
+@app.get("/api/tendencias")
+def ver_tendencias(region: str = "CO", forzar: bool = False):
+    return _nichos(lambda: nichos.tendencias(region, forzar))
+
+
+@app.post("/api/youtube")
+def youtube_guardar(c: ClaveGemini):
+    """La clave de la YouTube Data API (se prueba con una llamada de 1 unidad)."""
+    _yo()
+    k = c.clave.strip()
+    if not k:
+        raise HTTPException(400, "Pega tu clave de YouTube Data API.")
+    ok, texto = nichos.probar(k)
+    if not ok:
+        raise HTTPException(400, texto)
+    nichos.guardar_clave(k)
+    return {"ok": True, "texto": texto}
 
 
 @app.get("/api/openai")

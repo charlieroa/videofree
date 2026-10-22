@@ -179,6 +179,43 @@
   .ref-proyecto img { width: 160px; aspect-ratio: 16/9; object-fit: cover; border-radius: 8px; border: 1px solid var(--borde); }
   .escena .tuya { position: absolute; right: 6px; top: 6px; background: var(--ok); color: #04210f;
                   font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+
+  /* tus fotos */
+  .fotos { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 6px 0; }
+  .fotos .foto { position: relative; }
+  .fotos img { width: 84px; aspect-ratio: 1; object-fit: cover; border-radius: 6px; border: 1px solid var(--borde); display: block; }
+  .fotos .foto button { position: absolute; top: 2px; right: 2px; padding: 0 6px; font-size: 12px; line-height: 18px; border-radius: 9px; }
+  .fotos-modo { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; }
+  .fotos-modo label { display: flex; gap: 6px; align-items: center; margin: 0; }
+  .fotos-modo input { width: auto; }
+  .fotos-modo[hidden] { display: none; }
+  /* nichos */
+  .nichos { display: grid; gap: 16px; }
+  .nichos .panel { margin: 0; }
+  .nichos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .nicho { border: 1px solid var(--borde); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 6px; background: var(--panel); }
+  .nicho h3 { margin: 0; font-size: 15px; }
+  .nicho .num { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; font-size: 12px; color: var(--suave); }
+  .nicho .num b { display: block; font-size: 16px; color: var(--texto); }
+  .nicho.activo { border-color: var(--acento); }
+  .videos-top { display: grid; gap: 10px; }
+  .video-top { display: grid; grid-template-columns: 160px 1fr; gap: 12px; align-items: start; }
+  .video-top img { width: 160px; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; }
+  .video-top .titulo { font-weight: 600; color: var(--texto); text-decoration: none; }
+  .video-top small { color: var(--suave); display: block; margin: 3px 0 6px; }
+  .sorpresa { background: var(--ok); color: #04210f; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 4px; }
+  @media (max-width: 600px) { .video-top { grid-template-columns: 1fr; } .video-top img { width: 100%; } }
+  /* encuadre a mano (perfil y banner) */
+  .recorte-velo { position: fixed; inset: 0; background: #000c; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .recorte-caja { background: var(--panel); border-radius: 12px; padding: 16px; width: min(900px, 100%); max-height: 100%; overflow: auto; }
+  .recorte-marco { position: relative; overflow: hidden; background: #111; touch-action: none; cursor: grab; margin: 10px auto; user-select: none; }
+  .recorte-marco.perfil { width: min(420px, 100%); aspect-ratio: 1; }
+  .recorte-marco.banner { width: 100%; aspect-ratio: 16/9; }
+  .recorte-marco img { position: absolute; left: 0; top: 0; transform-origin: 0 0; max-width: none; pointer-events: none; }
+  .recorte-marco .circulo { position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 9999px #0008; pointer-events: none; }
+  .recorte-marco .zona { position: absolute; left: 0; right: 0; top: 35.31%; height: 29.38%; border: 2px dashed #fff9; pointer-events: none; }
+  .recorte-marco .zona.segura { left: 19.8%; right: 19.8%; border-color: var(--acento); }
+  .recorte-marco .zona span { position: absolute; top: 4px; left: 6px; font-size: 11px; color: #fff; background: #000a; padding: 1px 6px; border-radius: 4px; }
 </style>
 </head>
 <body class="fuera">
@@ -186,7 +223,7 @@
   <h1><a href="#"><span class="logo">▶</span> Video Simple</a></h1><span class="gratis">0 $ por vídeo</span>
   <div class="derecha">
     <span class="quien solo-dentro" id="quien"></span><select id="cambiarUsuario" class="solo-dentro" title="Cambiar de usuario" hidden></select>
-    <button id="abrirCanal" class="solo-dentro" title="Foto de perfil y banner con las medidas de YouTube">📺 Mi canal</button><button id="abrirAsistente" class="solo-dentro">Asistente</button><button id="abrirAjustes" class="solo-dentro">Ajustes</button>
+    <button id="abrirNichos" class="solo-dentro" title="Qué temas están dando vistas en YouTube">🔥 Nichos</button><button id="abrirCanal" class="solo-dentro" title="Foto de perfil y banner con las medidas de YouTube">📺 Mi canal</button><button id="abrirAsistente" class="solo-dentro">Asistente</button><button id="abrirAjustes" class="solo-dentro">Ajustes</button>
     <button id="salir" class="solo-dentro">Salir</button>
     <button id="entrar" class="primario solo-fuera">Entrar</button>
   </div>
@@ -217,7 +254,13 @@
       <label>Imagen de ejemplo del estilo (opcional)</label>
       <div class="ref-nueva"><img id="nRefVista" alt="" hidden><button type="button" id="nRefSubir">Subir imagen</button>
         <button type="button" id="nRefQuitar" hidden>Quitar</button><input type="file" id="nRef" accept="image/*" hidden></div>
-      <p class="estado" style="margin:4px 0 0">Con Gemini, todas las imágenes copian su estilo (no su contenido).</p>
+      <p class="estado" style="margin:4px 0 0">Con Gemini u OpenAI, todas las imágenes copian su estilo (no su contenido).</p>
+      <label>Tus fotos (opcional: tu producto, tu cara, tu local…)</label>
+      <div class="fotos" id="nFotosVista"></div>
+      <div class="fila"><button type="button" id="nFotosSubir">Subir fotos</button><input type="file" id="nFotos" accept="image/*" multiple hidden></div>
+      <div class="fotos-modo" id="nFotosModo" hidden>
+        <label><input type="radio" name="nFotosModo" value="referencia" checked> La IA crea las imágenes a partir de ellas</label>
+        <label><input type="radio" name="nFotosModo" value="escenas"> Usar mis fotos tal cual en el vídeo</label></div>
       <label>Tono de la narración</label>
       <select id="nTono">
         <option value="">Divulgativo y ameno</option>
@@ -354,8 +397,10 @@ $("#crear").onclick = async () => {
     const p = await api("/api/proyectos", { method: "POST", body: JSON.stringify({
       titulo: $("#nTitulo").value, texto: $("#nTexto").value, minutos: +$("#nMinutos").value || 1,
       estilo: $("#nEstilo").value, tono: $("#nTono").value, simular: $("#nSimular").checked,
-      voz: $("#nVozCaja select")?.value || "", referencia: refNueva, auto: $("#nAuto").checked }) });
+      voz: $("#nVozCaja select")?.value || "", referencia: refNueva, auto: $("#nAuto").checked,
+      fotos: fotosNuevas, fotos_modo: document.querySelector('input[name="nFotosModo"]:checked')?.value || "referencia" }) });
     refNueva = ""; $("#nRefVista").hidden = true; $("#nRefQuitar").hidden = true;
+    fotosNuevas = []; pintarFotosNuevas();
     location.hash = p.id;
   } catch (e) { alert(e.message); }
 };
@@ -369,9 +414,23 @@ $("#nRef").onchange = async ev => {
   $("#nRefVista").src = refNueva; $("#nRefVista").hidden = false; $("#nRefQuitar").hidden = false;
 };
 $("#nRefQuitar").onclick = () => { refNueva = ""; $("#nRefVista").hidden = true; $("#nRefQuitar").hidden = true; };
+// Tus fotos del vídeo nuevo (se mandan al crear).
+let fotosNuevas = [];
+function pintarFotosNuevas() {
+  $("#nFotosVista").innerHTML = fotosNuevas.map((f, i) => `<div class="foto"><img src="${f}" alt=""><button type="button" data-quitar-nueva="${i}" title="Quitar">×</button></div>`).join("");
+  $("#nFotosModo").hidden = !fotosNuevas.length;
+  document.querySelectorAll("[data-quitar-nueva]").forEach(b => b.onclick = () => { fotosNuevas.splice(+b.dataset.quitarNueva, 1); pintarFotosNuevas(); });
+}
+$("#nFotosSubir").onclick = () => $("#nFotos").click();
+$("#nFotos").onchange = async ev => {
+  const lista = [...ev.target.files]; ev.target.value = "";
+  for (const f of lista) fotosNuevas.push(await leerArchivo(f));
+  pintarFotosNuevas();
+};
 
 window.onhashchange = () => abrir(location.hash.slice(1));
 async function abrir(pid) {
+  if (pid === "nichos") { actual = null; clearTimeout(temporizador); clearTimeout(relojTablero); await pintarNichos(); if (sesion.usuario) cargarLista(); return; }
   if (pid === "canal") { actual = null; clearTimeout(temporizador); clearTimeout(relojTablero); await pintarCanal(); if (sesion.usuario) cargarLista(); return; }
   actual = pid; activa = null;
   if (pid) { await refrescar(); }
@@ -495,7 +554,8 @@ function pintar() {
   const faltanImg = d.escenas.filter(e => !e.imagen).length;
   const plan = est.motor === "pollinations" ? `${est.imagenes} imágenes por generar con Pollinations (~${est.minutos_imagenes} min)`
     : est.motor === "gemini" || est.motor === "openai" ? `${est.imagenes} imágenes por generar con ${est.motor === "openai" ? "OpenAI" : "Gemini"} (~${est.minutos_imagenes} min)`
-    : est.motor === "manual" ? `${faltanImg} escenas esperan tu imagen` : "imágenes de prueba";
+    : est.motor === "manual" ? `${faltanImg} escenas esperan tu imagen`
+    : est.motor === "fotos" ? `${est.imagenes} escenas con tus fotos` : "imágenes de prueba";
 
   $("#vista").innerHTML = `
     <div class="fila" style="justify-content:space-between">
@@ -510,6 +570,13 @@ function pintar() {
       <button id="refSubir" ${ocupado ? "disabled" : ""}>${d.referencia ? "Cambiar" : "Subir"}</button>
       ${d.referencia ? `<button id="refQuitar" ${ocupado ? "disabled" : ""}>Quitar</button>` : ""}
       <input type="file" id="refArchivo" accept="image/*" hidden></div>
+    <div class="ref-proyecto"><span class="estado">Tus fotos</span>
+      <div class="fotos">${(d.fotos || []).map((f, i) => `<div class="foto"><a href="${archivo(f)}" target="_blank"><img src="${archivo(f)}" alt=""></a>${ocupado ? "" : `<button data-quitar-foto="${i}" title="Quitar">×</button>`}</div>`).join("")}</div>
+      <button id="fotosSubir" ${ocupado ? "disabled" : ""}>${d.fotos?.length ? "Añadir" : "Subir fotos"}</button>
+      <input type="file" id="fotosArchivo" accept="image/*" multiple hidden>
+      ${d.fotos?.length ? `<div class="fotos-modo">
+        <label><input type="radio" name="pFotosModo" value="referencia" ${d.fotos_modo !== "escenas" ? "checked" : ""} ${ocupado ? "disabled" : ""}> La IA las usa de referencia</label>
+        <label><input type="radio" name="pFotosModo" value="escenas" ${d.fotos_modo === "escenas" ? "checked" : ""} ${ocupado ? "disabled" : ""}> Mis fotos tal cual en las escenas</label></div>` : ""}</div>
     <div class="pasos">
       <button data-paso="guion" ${ocupado || guionAMano ? "disabled" : ""}>1 · Guion</button>
       <button data-paso="voz" ${ocupado || !hay ? "disabled" : ""}>2 · Voz</button>
@@ -557,6 +624,26 @@ function pintar() {
     catch (e) { alert(e.message); }
     refrescar();
   };
+  $("#fotosSubir").onclick = () => $("#fotosArchivo").click();
+  $("#fotosArchivo").onchange = async ev => {
+    const lista = [...ev.target.files]; ev.target.value = "";
+    if (!lista.length) return;
+    const imagenes = [];
+    for (const f of lista) imagenes.push(await leerArchivo(f));
+    try { await api(`/api/proyectos/${actual}/fotos`, { method: "POST", body: JSON.stringify({ imagenes }) }); }
+    catch (e) { alert(e.message); }
+    refrescar();
+  };
+  document.querySelectorAll("[data-quitar-foto]").forEach(b => b.onclick = async () => {
+    try { await api(`/api/proyectos/${actual}/fotos/${b.dataset.quitarFoto}`, { method: "DELETE" }); }
+    catch (e) { alert(e.message); }
+    refrescar();
+  });
+  document.querySelectorAll('input[name="pFotosModo"]').forEach(r => r.onchange = async () => {
+    try { await api(`/api/proyectos/${actual}/fotos`, { method: "POST", body: JSON.stringify({ modo: r.value }) }); }
+    catch (e) { alert(e.message); }
+    refrescar();
+  });
   if ($("#refQuitar")) $("#refQuitar").onclick = async () => {
     try { await api(`/api/proyectos/${actual}/referencia`, { method: "POST", body: JSON.stringify({ imagen: "" }) }); }
     catch (e) { alert(e.message); }
@@ -653,6 +740,7 @@ const PASOS_ASIS = ["equipo", "gemini", "voz", "listo"];
 let proveedorAsis = null;          // paso 2: "gemini" u "openai" (por defecto, la que ya tenga clave)
 $("#abrirAsistente").onclick = () => abrirAsistente();
 $("#abrirCanal").onclick = () => { location.hash = "canal"; };
+$("#abrirNichos").onclick = () => { location.hash = "nichos"; };
 
 // ------------------------------------------------------------- mi canal
 // Sube una foto cualquiera y sale con las medidas de YouTube: perfil 800x800 y banner
@@ -665,7 +753,7 @@ async function pintarCanal() {
     <div class="tablero-cab"><h2>📺 Mi canal de YouTube</h2><a href="#">← Mis vídeos</a></div>
     <div class="panel">
       <h2>Foto de perfil</h2>
-      <p class="medidas">YouTube: <b>800 × 800 px</b>, se ve como un círculo (98 px). JPG o PNG, máx. 4 MB. Sube cualquier foto: se recorta sola al centro (en retratos, cerca de la cara).</p>
+      <p class="medidas">YouTube: <b>800 × 800 px</b>, se ve como un círculo (98 px). JPG o PNG, máx. 4 MB. Sube cualquier foto y encuádrala: arrastra para moverla y usa el zoom.</p>
       <div class="canal-fila">
         ${v("perfil") ? `<img class="perfil-grande" src="${v("perfil")}" alt=""><img class="perfil-chico" src="${v("perfil")}" alt="" title="Así se ve junto a tus vídeos">` : `<div class="perfil-grande"></div>`}
         <div><input type="file" id="fPerfil" accept="image/*" hidden>
@@ -676,7 +764,7 @@ async function pintarCanal() {
     </div>
     <div class="panel">
       <h2>Banner</h2>
-      <p class="medidas">YouTube: <b>2560 × 1440 px</b> (mínimo 2048 × 1152), máx. 6 MB. La TV lo enseña entero; el ordenador, la franja del medio (2560 × 423); el móvil, solo el centro (<b>1546 × 423</b>, zona segura). Si tu foto no es ancha, va entera en la zona segura sobre un fondo desenfocado de ella misma.</p>
+      <p class="medidas">YouTube: <b>2560 × 1440 px</b> (mínimo 2048 × 1152), máx. 6 MB. La TV lo enseña entero; el ordenador, la franja del medio (2560 × 423); el móvil, solo el centro (<b>1546 × 423</b>, zona segura). Al subirla la encuadras tú: arrastra y haz zoom hasta que lo importante quede dentro de la zona segura. Si alejas más que la foto, el hueco se rellena con ella misma desenfocada.</p>
       <div class="banner-caja">${v("banner") ? `<img src="${v("banner")}" alt="">` : ""}
         <div class="zona"><span>Ordenador</span></div><div class="zona segura"><span>Móvil · zona segura</span></div></div>
       <div class="canal-fila"><input type="file" id="fBanner" accept="image/*" hidden>
@@ -691,14 +779,155 @@ async function pintarCanal() {
     $(campo).onchange = async ev => {
       const f = ev.target.files[0]; if (!f) return;
       $(aviso).textContent = "Ajustando a la medida…";
+      ev.target.value = "";
       const datos = await new Promise(ok => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(f); });
+      const recorte = await encuadrar(tipo, datos);
+      if (recorte === false) { $(aviso).textContent = ""; return; }
       try {
-        const r = await api(`/api/canal/${tipo}`, { method: "POST", body: JSON.stringify({ imagen: datos }) });
+        const r = await api(`/api/canal/${tipo}`, { method: "POST", body: JSON.stringify({ imagen: datos, recorte }) });
         await pintarCanal();
         $(aviso).textContent = `✓ ${r.ancho}×${r.alto}, ${r.kb} KB, ${r.como}.${r.aviso ? " " + r.aviso : ""}`;
       } catch (e) { $(aviso).textContent = "✗ " + e.message; }
     };
   }
+}
+
+// Encuadre a mano: la foto se arrastra y se acerca/aleja dentro de un marco con la
+// proporción final (1:1 o 16:9). Devuelve {x, y, w, h} en fracciones de la foto,
+// null = «automático» (como antes) y false = cancelado.
+function encuadrar(tipo, datos) {
+  return new Promise(resolver => {
+    const velo = document.createElement("div");
+    velo.className = "recorte-velo";
+    velo.innerHTML = `<div class="recorte-caja">
+      <h2 style="margin:0">${tipo === "perfil" ? "Encuadra tu foto de perfil" : "Encuadra tu banner"}</h2>
+      <p class="estado" style="margin:4px 0 0">Arrastra la foto para moverla; usa el zoom (o la rueda del ratón) para acercar o alejar.${tipo === "banner" ? " Lo importante, dentro de la zona segura (lo que se ve en el móvil)." : ""}</p>
+      <div class="recorte-marco ${tipo}"><img alt="">
+        ${tipo === "perfil" ? `<div class="circulo"></div>` : `<div class="zona"><span>Ordenador</span></div><div class="zona segura"><span>Móvil · zona segura</span></div>`}</div>
+      <div class="fila"><span class="estado">Zoom</span><input type="range" min="0.5" max="4" step="0.01" value="1" style="flex:1"></div>
+      <div class="fila" style="justify-content:flex-end;margin-top:10px">
+        <button data-r="cancelar">Cancelar</button><button data-r="auto">Automático</button><button class="primario" data-r="ok">Guardar</button></div></div>`;
+    document.body.appendChild(velo);
+    const marco = velo.querySelector(".recorte-marco"), img = marco.querySelector("img"), zoom = velo.querySelector('input[type="range"]');
+    let W = 0, H = 0, cubre = 1, z = 1, x = 0, y = 0;
+    const k = () => cubre * z;
+    const pintar = () => { img.style.transform = `translate(${x}px, ${y}px) scale(${k()})`; };
+    const zoomA = (nuevo, cx = W / 2, cy = H / 2) => {           // acercar sin mover el punto (cx, cy)
+      nuevo = Math.min(4, Math.max(0.5, nuevo));
+      const antes = k(); z = nuevo; const ahora = k();
+      x = cx - (cx - x) * ahora / antes; y = cy - (cy - y) * ahora / antes;
+      zoom.value = z; pintar();
+    };
+    img.onload = () => {
+      W = marco.clientWidth; H = marco.clientHeight;
+      cubre = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+      x = (W - img.naturalWidth * k()) / 2; y = (H - img.naturalHeight * k()) / 2; pintar();
+    };
+    img.src = datos;
+    zoom.oninput = () => zoomA(+zoom.value);
+    marco.addEventListener("wheel", ev => { ev.preventDefault(); const r = marco.getBoundingClientRect();
+      zoomA(z * (ev.deltaY < 0 ? 1.08 : 1 / 1.08), ev.clientX - r.left, ev.clientY - r.top); }, { passive: false });
+    let arrastre = null;
+    marco.onpointerdown = ev => { arrastre = { px: ev.clientX, py: ev.clientY, x, y }; marco.setPointerCapture(ev.pointerId); marco.style.cursor = "grabbing"; };
+    marco.onpointermove = ev => { if (!arrastre) return; x = arrastre.x + ev.clientX - arrastre.px; y = arrastre.y + ev.clientY - arrastre.py; pintar(); };
+    marco.onpointerup = marco.onpointercancel = () => { arrastre = null; marco.style.cursor = ""; };
+    const cerrar = valor => { velo.remove(); resolver(valor); };
+    velo.querySelector('[data-r="cancelar"]').onclick = () => cerrar(false);
+    velo.querySelector('[data-r="auto"]').onclick = () => cerrar(null);
+    velo.querySelector('[data-r="ok"]').onclick = () => {
+      const w = img.naturalWidth, h = img.naturalHeight, kk = k();
+      cerrar({ x: -x / kk / w, y: -y / kk / h, w: W / kk / w, h: H / kk / h });
+    };
+  });
+}
+
+// ------------------------------------------------------------- nichos de YouTube
+// Qué temas dan vistas ahora: los vídeos largos más vistos del último mes en español,
+// por nicho, con la clave gratis de la YouTube Data API. «Usar este tema» rellena el
+// vídeo nuevo para que la IA escriba el guion.
+const REGIONES = { CO: "Colombia", MX: "México", AR: "Argentina", ES: "España", US: "Estados Unidos", CL: "Chile", PE: "Perú", VE: "Venezuela", EC: "Ecuador" };
+const cifra = n => n == null ? "oculto" : new Intl.NumberFormat("es", { notation: "compact", maximumFractionDigits: 1 }).format(n);
+let nichoAbierto = null;
+
+async function pintarNichos() {
+  let c;
+  try { c = await api("/api/nichos"); } catch (e) { $("#vista").innerHTML = `<p class="estado">${esc(e.message)}</p>`; return; }
+  const tarjetaNicho = n => {
+    const d = n.datos;
+    return `<div class="nicho ${nichoAbierto === n.id ? "activo" : ""}"><h3>${esc(n.nombre)}</h3><small class="estado">«${esc(n.consulta)}»</small>
+      ${d ? `<div class="num"><span><b>${cifra(d.demanda)}</b>vistas/día</span><span><b>${cifra(d.competencia)}</b>subs típicos</span><span><b>${d.oportunidad}%</b>sorpresas</span></div>` : `<p class="estado" style="margin:0">Sin mirar hoy</p>`}
+      <button data-nicho="${n.id}" ${c.clave ? "" : "disabled"}>${d ? "Ver vídeos" : "Analizar"}</button></div>`;
+  };
+  $("#vista").innerHTML = `<div class="nichos">
+    <div class="tablero-cab"><h2>🔥 Nichos de YouTube</h2><a href="#">← Mis vídeos</a></div>
+    ${c.clave ? "" : `<div class="panel"><h2>Tu clave de YouTube (gratis)</h2>
+      <ol><li>Entra en <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener">console.cloud.google.com → YouTube Data API v3</a> y pulsa <b>Habilitar</b> (crea un proyecto si te lo pide).</li>
+        <li>Ve a <b>Credenciales → Crear credenciales → Clave de API</b> y cópiala.</li>
+        <li>Pégala aquí. Si ya tienes clave de Gemini y habilitas la API en ese mismo proyecto, esa también sirve.</li></ol>
+      <div class="fila"><input id="ytClave" type="password" autocomplete="off" placeholder="pega tu clave" style="flex:1"><button class="primario" id="ytGuardar">Probar y guardar</button></div>
+      <p class="estado" id="ytEstado">Es gratis: 10.000 unidades al día; mirar un nicho gasta ~100 y queda guardado todo el día.</p></div>`}
+    <div class="panel"><h2>Buscar un tema</h2>
+      <div class="fila"><input id="nbConsulta" placeholder="Ej.: recetas fáciles, historia de México, IA para negocios…" style="flex:1"><button class="primario" id="nbBuscar" ${c.clave ? "" : "disabled"}>Analizar</button></div>
+      <p class="medidas"><b>Vistas/día</b>: mediana de los vídeos largos más vistos del último mes (demanda). <b>Subs típicos</b>: tamaño de los canales que salen (competencia). <b>Sorpresas</b>: % de vídeos de canales pequeños (&lt; 50 mil subs) con más vistas que suscriptores: si es alto, el nicho premia el contenido y no el tamaño del canal.</p></div>
+    <div class="nichos-grid">${c.nichos.map(tarjetaNicho).join("")}</div>
+    <div id="nichoDetalle"></div>
+    <div class="panel"><h2>Tendencias de hoy</h2>
+      <div class="fila"><select id="tRegion">${Object.entries(REGIONES).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
+        <button id="tVer" ${c.clave ? "" : "disabled"}>Ver lo más visto hoy</button></div>
+      <div id="tLista"></div></div>
+  </div>`;
+
+  if ($("#ytGuardar")) $("#ytGuardar").onclick = async () => {
+    $("#ytEstado").textContent = "Probando con YouTube…";
+    try { await api("/api/youtube", { method: "POST", body: JSON.stringify({ clave: $("#ytClave").value }) }); pintarNichos(); }
+    catch (e) { $("#ytEstado").textContent = "✗ " + e.message; }
+  };
+  const detalle = (d, n) => {
+    $("#nichoDetalle").innerHTML = `<div class="panel">
+      <div class="tablero-cab"><h2>${esc(n ? n.nombre : "«" + d.consulta + "»")}</h2><button id="ndRehacer">Volver a mirar</button></div>
+      <p class="estado">${d.videos} vídeos largos del último mes · <b>${cifra(d.demanda)}</b> vistas/día · canales de <b>${cifra(d.competencia)}</b> subs · <b>${d.oportunidad}%</b> sorpresas · duran ~${d.minutos_tipicos} min</p>
+      <div class="videos-top">${d.top.map((v, i) => `<div class="video-top"><a href="${v.url}" target="_blank" rel="noopener"><img src="${v.miniatura}" alt="" loading="lazy"></a>
+        <div><a class="titulo" href="${v.url}" target="_blank" rel="noopener">${esc(v.titulo)}</a>${v.sorpresa ? `<span class="sorpresa">canal pequeño</span>` : ""}
+          <small>${esc(v.canal)} · ${cifra(v.suscriptores)} subs · ${cifra(v.vistas)} vistas (${cifra(v.vistas_dia)}/día) · ${v.minutos} min · ${v.publicado}</small>
+          <button data-tema="${i}">Usar este tema</button></div></div>`).join("") || `<p class="estado">No salió ningún vídeo largo: prueba con otras palabras.</p>`}</div></div>`;
+    document.querySelectorAll("[data-tema]").forEach(b => b.onclick = () => usarTema(d.top[+b.dataset.tema], n));
+    $("#ndRehacer").onclick = () => n ? abrirNicho(n.id, true) : buscarTema(d.consulta, true);
+    $("#nichoDetalle").scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  async function abrirNicho(id, forzar = false) {
+    nichoAbierto = id;
+    $("#nichoDetalle").innerHTML = `<p class="estado">Mirando YouTube…</p>`;
+    try { const n = await api(`/api/nichos/${id}${forzar ? "?forzar=1" : ""}`); detalle(n.datos, n); }
+    catch (e) { $("#nichoDetalle").innerHTML = `<p class="estado">✗ ${esc(e.message)}</p>`; }
+  }
+  async function buscarTema(consulta, forzar = false) {
+    if (!consulta.trim()) return;
+    $("#nichoDetalle").innerHTML = `<p class="estado">Mirando YouTube…</p>`;
+    try { detalle(await api("/api/nichos/buscar", { method: "POST", body: JSON.stringify({ consulta, forzar }) })); }
+    catch (e) { $("#nichoDetalle").innerHTML = `<p class="estado">✗ ${esc(e.message)}</p>`; }
+  }
+  document.querySelectorAll("[data-nicho]").forEach(b => b.onclick = () => abrirNicho(b.dataset.nicho));
+  $("#nbBuscar").onclick = () => buscarTema($("#nbConsulta").value);
+  $("#nbConsulta").onkeydown = ev => { if (ev.key === "Enter") buscarTema($("#nbConsulta").value); };
+  $("#tVer").onclick = async () => {
+    $("#tLista").innerHTML = `<p class="estado">Mirando…</p>`;
+    try {
+      const t = await api(`/api/tendencias?region=${$("#tRegion").value}`);
+      $("#tLista").innerHTML = t.categorias.map(g => `<p><b>${esc(g.categoria)}</b> · ${g.videos} de los 50 más vistos<br>
+        ${g.ejemplos.map(v => `<small class="estado">· <a href="${v.url}" target="_blank" rel="noopener">${esc(v.titulo)}</a> (${esc(v.canal)})</small>`).join("<br>")}</p>`).join("");
+    } catch (e) { $("#tLista").innerHTML = `<p class="estado">✗ ${esc(e.message)}</p>`; }
+  };
+}
+
+// Rellena «Nuevo vídeo» con un tema que está funcionando: la IA escribe un guion propio.
+function usarTema(v, n) {
+  $("#nTitulo").value = v.titulo;
+  $("#nTexto").value = `Haz un vídeo ORIGINAL sobre este tema, que hoy está dando vistas en YouTube: «${v.titulo}».\n`
+    + `Toma la idea, no copies el vídeo: busca un ángulo propio, un gancho fuerte al principio y datos concretos.`;
+  if (n && n.tono !== undefined) $("#nTono").value = n.tono;
+  if (v.minutos) $("#nMinutos").value = Math.min(15, Math.max(1, Math.round(v.minutos)));
+  location.hash = "";
+  setTimeout(() => { $("#nTitulo").scrollIntoView({ behavior: "smooth", block: "center" }); $("#nTitulo").focus(); }, 50);
 }
 
 function abrirAsistente(inicio = 0) { paso = inicio; diag = null; $("#velo").hidden = false; pintarAsistente(); }
