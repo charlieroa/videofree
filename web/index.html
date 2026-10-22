@@ -115,6 +115,17 @@
   .resumen { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 10px 0; font-size: 14px; }
   .resumen dt { color: var(--suave); }
   .resumen dd { margin: 0; }
+  .progreso { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+  .progreso .etapa { border: 1px solid var(--borde); border-radius: 8px; padding: 8px 10px; opacity: .6; }
+  .progreso .etapa.hecho { opacity: 1; }
+  .progreso .etapa.aqui { opacity: 1; border-color: var(--acento); }
+  .progreso .cab { display: flex; justify-content: space-between; gap: 6px; font-size: 13px; font-weight: 600; }
+  .progreso .cab small { color: var(--suave); font-weight: 400; }
+  .progreso .barra { height: 5px; background: var(--borde); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+  .progreso .barra i { display: block; height: 100%; background: var(--acento); transition: width .4s; }
+  .progreso .etapa.hecho .barra i { background: var(--ok); }
+  .progreso .ultimo { grid-column: 1 / -1; margin: 0; font-size: 13px; color: var(--suave); }
+  @media (max-width: 600px) { .progreso { grid-template-columns: 1fr 1fr; } }
   .puter-caja { border: 1px solid var(--acento); border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 14px; }
   .asistente { background: var(--panel); border-radius: 12px; max-width: 640px; width: 100%; max-height: 92vh; overflow: auto; padding: 24px; }
   .asistente h2 { font-size: 20px; margin-bottom: 4px; }
@@ -437,7 +448,8 @@ async function imagenPuter(prompt, blobs) {
   return await leerArchivo(blob);
 }
 // Lo que el servidor le pide a esta pestaña (guion o imagen) y la voz escena a escena.
-let atendiendo = null;
+let atendiendo = null, sinCreditosPuter = "";    // tras el primer «sin créditos», ni se intenta (Puter saca su aviso cada vez)
+const SIN_CREDITOS = /insufficient|402|credits|funding|balance|upgrade/i;
 async function trabajarConPuter(d) {
   if (!d || !d.ocupado || d.simular) return;
   if (d.voz_navegador) narrarEnNavegador(d.id);
@@ -447,10 +459,14 @@ async function trabajarConPuter(d) {
   atendiendo = pedido.id;
   let resultado = null, error = "";
   try {
+    if (sinCreditosPuter) throw new Error(sinCreditosPuter);
     resultado = pedido.tipo === "texto" ? await textoPuter(pedido.prompt, await blobsDe(d.id, pedido.imagenes))
       : await imagenPuter(pedido.prompt, await blobsDe(d.id, pedido.referencias));
     errorPuter = "";
-  } catch (err) { error = errorDe(err) || "error"; errorPuter = error; }
+  } catch (err) {
+    error = errorDe(err) || "error"; errorPuter = error;
+    if (SIN_CREDITOS.test(error)) sinCreditosPuter = error;
+  }
   try { await api(`/api/proyectos/${d.id}/navegador`, { method: "POST", body: JSON.stringify({ id: pedido.id, resultado, error }) }); } catch { }
   atendiendo = null;
 }
@@ -757,7 +773,7 @@ function pintar() {
       3) copia toda su respuesta y pégala aquí:
       <textarea id="guionPegado" rows="5" placeholder="Pega aquí la respuesta de ChatGPT (el JSON)" style="margin-top:6px"></textarea>
       <button class="primario" id="usarGuion" style="margin-top:6px">Usar este guion</button></div>` : ""}
-    ${ocupado ? `<p class="estado">⏳ Trabajando: ${esc(d.trabajo?.paso || "")}…</p>` : ""}
+    ${ocupado ? progreso(d) : ""}
     ${d.mp4 ? `<div class="final"><h2>Vídeo final</h2><video controls src="${archivo(d.mp4)}"></video>
       <p><a href="${archivo(d.mp4)}" download>Descargar MP4</a></p></div>` : ""}
     ${d.biblia ? `<details><summary>Estilo y personajes (se repiten en cada imagen)</summary>
@@ -1096,6 +1112,27 @@ function usarTema(v, n) {
   if (v.minutos) $("#nMinutos").value = Math.min(15, Math.max(1, Math.round(v.minutos)));
   location.hash = "";
   abrirMago(MAGO.indexOf("tema"));
+}
+
+// ------------------------------------------------------------- en qué va
+// Las 4 etapas con su avance (lo hecho se cuenta en las escenas) y lo último del registro.
+function progreso(d) {
+  const n = d.escenas.length, actual = d.trabajo?.paso || "";
+  const voz = d.escenas.filter(e => e.audio).length;
+  const img = d.escenas.filter(e => e.imagen).length;
+  const etapas = [
+    ["guion", "Guion", n ? `${n} escenas` : "", n ? 1 : 0],
+    ["voz", "Voz", n ? `${voz}/${n}` : "", n ? voz / n : 0],
+    ["imagenes", "Imágenes", n ? `${img}/${n}` : "", n ? img / n : 0],
+    ["montaje", "Montaje", d.mp4 ? "listo" : "", d.mp4 ? 1 : 0]];
+  const ultimo = (d.registro || []).slice(-1)[0] || "";
+  return `<div class="progreso">${etapas.map(([id, nombre, cuenta, hecho]) => {
+      const aqui = actual === id || (actual === "voz + imagenes" && (id === "voz" || id === "imagenes"));
+      const estado = aqui ? "aqui" : hecho >= 1 ? "hecho" : "";
+      return `<div class="etapa ${estado}"><div class="cab"><span>${estado === "hecho" ? "✓" : aqui ? "⏳" : "○"} ${nombre}</span><small>${cuenta}</small></div>
+        <div class="barra"><i style="width:${Math.round(Math.min(1, hecho) * 100)}%"></i></div></div>`;
+    }).join("")}
+    <p class="ultimo">${esc(ultimo.replace(/^\d\d:\d\d:\d\d\s+/, ""))}</p></div>`;
 }
 
 // ------------------------------------------------------------- crear vídeo (asistente)

@@ -22,6 +22,7 @@ La voz con Puter va por su propio camino (motor/voz.py), que ya existia.
 """
 import base64
 import io
+import re
 import threading
 import uuid
 
@@ -80,7 +81,7 @@ def _pedir(datos, tipo, carga, avisar, espera=ESPERA_S):
                 del _pedidos[pid]
     if pedido["_error"]:
         err = pedido["_error"]
-        if "insufficient" in err.lower() or "402" in err or "saldo" in err.lower():
+        if re.search(r"insufficient|402|saldo|credits|funding|balance|upgrade", err, re.I):
             raise SinCreditos(f"Se acabaron los créditos gratis de tu cuenta de Puter ({err[:200]}).")
         raise ErrorNavegador(f"Puter: {err[:300]}")
     return pedido["_resultado"]
