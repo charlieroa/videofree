@@ -131,6 +131,14 @@
   @keyframes cargar { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
   .progreso .ultimo { grid-column: 1 / -1; margin: 0; font-size: 13px; color: var(--suave); }
   @media (max-width: 600px) { .progreso { grid-template-columns: 1fr 1fr; } }
+  .creditos { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+  .creditos .cupo { border: 1px solid var(--borde); border-radius: 999px; padding: 4px 10px; white-space: nowrap; color: var(--suave); }
+  .creditos .cupo b { color: var(--texto); }
+  .creditos .cupo i { display: inline-block; width: 46px; height: 5px; background: var(--borde); border-radius: 3px; margin-left: 6px; vertical-align: middle; overflow: hidden; position: relative; }
+  .creditos .cupo i::after { content: ""; position: absolute; inset: 0; width: var(--usado); background: var(--ok); }
+  .creditos .cupo.bajo i::after { background: #e5a100; }
+  .creditos .cupo.agotado i::after { background: #e5484d; }
+  @media (max-width: 700px) { .creditos { display: none; } }
   .puter-caja { border: 1px solid var(--acento); border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 14px; }
   .asistente { background: var(--panel); border-radius: 12px; max-width: 640px; width: 100%; max-height: 92vh; overflow: auto; padding: 24px; }
   .asistente h2 { font-size: 20px; margin-bottom: 4px; }
@@ -245,7 +253,7 @@
 <header>
   <h1><a href="#"><span class="logo">▶</span> Video Simple</a></h1><span class="gratis">0 $ por vídeo</span>
   <div class="derecha">
-    <span class="quien solo-dentro" id="quien"></span><select id="cambiarUsuario" class="solo-dentro" title="Cambiar de usuario" hidden></select>
+    <span class="creditos solo-dentro" id="creditos"></span><span class="quien solo-dentro" id="quien"></span><select id="cambiarUsuario" class="solo-dentro" title="Cambiar de usuario" hidden></select>
     <button id="abrirNichos" class="solo-dentro" title="Qué temas están dando vistas en YouTube">🔥 Nichos</button><button id="abrirCanal" class="solo-dentro" title="Foto de perfil y banner con las medidas de YouTube">📺 Mi canal</button><button id="abrirAsistente" class="solo-dentro">Asistente</button><button id="abrirAjustes" class="solo-dentro">Ajustes</button>
     <button id="salir" class="solo-dentro">Salir</button>
     <button id="entrar" class="primario solo-fuera">Entrar</button>
@@ -563,7 +571,28 @@ const leerArchivo = f => new Promise(ok => { const r = new FileReader(); r.onloa
 async function cargarConfig() {
   [config, voces] = await Promise.all([api("/api/config"), api("/api/voces")]);
   pintarCfg();
+  pintarCreditos();
 }
+
+// ------------------------------------------------------------- créditos de hoy
+// Lo gastado hoy de los cupos gratis (lo cuenta la app con la tarifa oficial: por eso «≈»).
+const IMAGENES_POR_DIA = 165;          // neuronas aprox. por imagen 1280x720 con 2 referencias
+async function pintarCreditos() {
+  let c;
+  try { c = await api("/api/consumo"); } catch { return; }
+  const cupo = (icono, nombre, d, unidad, extra) => {
+    const parte = Math.min(1, d.gastado / d.cupo), clase = parte >= 1 ? "agotado" : parte > .8 ? "bajo" : "";
+    return `<span class="cupo ${clase}" title="${nombre}: ≈${d.gastado.toLocaleString("es")} de ${d.cupo.toLocaleString("es")} ${unidad} hoy (cupo gratis diario)">${icono} <b>≈${d.gastado.toLocaleString("es")}</b> / ${(d.cupo / 1000)}k${extra}<i style="--usado:${Math.round(parte * 100)}%"></i></span>`;
+  };
+  const partes = [];
+  if (c.cloudflare.conectado) {
+    const quedan = Math.max(0, Math.floor((c.cloudflare.cupo - c.cloudflare.gastado) / IMAGENES_POR_DIA));
+    partes.push(cupo("🖼", "Imágenes Cloudflare", c.cloudflare, "neuronas", ` · quedan ~${quedan} img`));
+  }
+  if (c.youtube.conectado) partes.push(cupo("🔥", "Nichos YouTube", c.youtube, "unidades", ""));
+  $("#creditos").innerHTML = partes.join("");
+}
+setInterval(() => { if (sesion?.usuario) pintarCreditos(); }, 20000);
 function pintarCfg() {
   $("#voz").innerHTML = opcionesVoz(config.voz);
   if (!$("#nVozCaja").dataset.hecho) {

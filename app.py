@@ -25,7 +25,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from motor import canal, cloudflare_img, gemini, guion, imagenes, montaje, navegador, nichos, openai_img, proyecto, usuarios, voz
+from motor import canal, cloudflare_img, consumo, gemini, guion, imagenes, montaje, navegador, nichos, openai_img, proyecto, usuarios, voz
 
 app = FastAPI(title="Video Simple")
 WEB = proyecto.RAIZ / "web"
@@ -818,6 +818,16 @@ def cloudflare_olvidar():
     _yo()
     cloudflare_img.olvidar()
     return {"ok": True}
+
+
+@app.get("/api/consumo")
+def ver_consumo():
+    """Lo gastado hoy de los cupos gratis (Cloudflare e YouTube), para la barra de arriba."""
+    _yo()
+    hoy = consumo.hoy()
+    hoy["cloudflare"]["conectado"] = cloudflare_img.hay_clave()
+    hoy["youtube"]["conectado"] = bool(nichos.clave())
+    return hoy
 
 
 @app.get("/api/openai")

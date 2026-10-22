@@ -27,7 +27,7 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 
-from . import canal, gemini, proyecto
+from . import canal, consumo, gemini, proyecto
 
 BASE = "https://www.googleapis.com/youtube/v3"
 CLAVE_SECRETO = "youtube_clave"
@@ -89,6 +89,7 @@ def _get(ruta, k=None, **params):
         r = requests.get(f"{BASE}/{ruta}", params={**params, "key": k}, timeout=30)
     except requests.RequestException as err:
         raise ErrorNichos(f"Sin conexión con YouTube: {err}")
+    consumo.sumar("youtube", 100 if ruta == "search" else 1)
     if r.status_code == 200:
         return r.json()
     try:

@@ -36,7 +36,7 @@ import time
 import requests
 from PIL import Image
 
-from . import proyecto
+from . import consumo, proyecto
 
 BASE = "https://api.cloudflare.com/client/v4/accounts"
 MODELO = "@cf/black-forest-labs/flux-2-klein-4b"
@@ -260,6 +260,9 @@ def imagen(prompt, destino, referencias=(), avisar=None):
         if r.status_code == 200:
             break
         err = _mensaje(r)
+        if isinstance(err, ErrorFiltro):           # la imagen se genero (y se cobro) antes de filtrarla
+            consumo.sumar("cloudflare", consumo.neuronas_imagen(
+                int(campos["width"][1]), int(campos["height"][1]), len(campos) - 4))
         if r.status_code >= 500 and intento < 3:
             if avisar:
                 avisar(f"Cloudflare falló ({r.status_code}); reintento")
@@ -275,6 +278,8 @@ def imagen(prompt, destino, referencias=(), avisar=None):
             dato = base64.b64encode(r.content).decode()
     if not dato:
         raise ErrorCloudflare("Cloudflare no ha devuelto imagen.")
+    consumo.sumar("cloudflare", consumo.neuronas_imagen(
+        int(campos["width"][1]), int(campos["height"][1]), len(campos) - 4))
     with Image.open(io.BytesIO(base64.b64decode(dato.split(",", 1)[-1]))) as im:
         im.convert("RGB").save(destino, "JPEG", quality=92)
     return destino
