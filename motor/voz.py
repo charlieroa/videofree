@@ -1,11 +1,12 @@
 """
 Paso 2: la voz de cada escena.
 
-El catalogo son 4 voces, en este orden:
+El catalogo, en este orden:
   - Puck (la de serie), Charon y Kore: Gemini TTS, con la clave de Gemini de la
     persona. El tono del video se da con un prefijo corto en el propio texto
     (motor/gemini.py). Sin clave de Gemini se narra con Jorge y el registro lo dice.
-  - Jorge (Mexico), al final: es-MX-JorgeNeural de edge-tts (Microsoft). Gratis y sin clave.
+  - Voces gratis y sin clave de edge-tts (Microsoft), de varios paises (GRATIS), y
+    Jorge (es-MX-JorgeNeural) al final.
 
 Los proyectos viejos con otra voz de edge-tts siguen funcionando. Se sintetiza escena a escena porque la duracion de cada
 audio es la que manda: la animacion de cada imagen dura lo que dura su frase.
@@ -23,13 +24,28 @@ from . import gemini, medios, proyecto
 PALABRAS_POR_SEGUNDO = 2.2
 FORMATO = re.compile(r"^[a-z]{2}-[A-Z]{2}-[A-Za-z]+Neural$")
 JORGE = "es-MX-JorgeNeural"
+# Voces de edge-tts (gratis, sin clave) que se ofrecen ademas de Jorge.
+GRATIS = [
+    ("es-CO-GonzaloNeural", "Gonzalo", "Colombia", "hombre"),
+    ("es-CO-SalomeNeural", "Salomé", "Colombia", "mujer"),
+    ("es-MX-DaliaNeural", "Dalia", "México", "mujer"),
+    ("es-US-AlonsoNeural", "Alonso", "Latino (EE. UU.)", "hombre"),
+    ("es-US-PalomaNeural", "Paloma", "Latino (EE. UU.)", "mujer"),
+    ("es-AR-TomasNeural", "Tomás", "Argentina", "hombre"),
+    ("es-AR-ElenaNeural", "Elena", "Argentina", "mujer"),
+    ("es-ES-AlvaroNeural", "Álvaro", "España", "hombre"),
+    ("es-ES-ElviraNeural", "Elvira", "España", "mujer"),
+]
 FRASE_MUESTRA = "Hola, así va a sonar la narración de tu video. ¿Te gusta cómo suena?"
 def catalogo():
-    """Las 4 voces: primero las 3 de Gemini (Puck es la de serie) y Jorge al final."""
+    """Primero las 3 de Gemini (Puck es la de serie), luego las gratis y Jorge al final."""
     con_clave = gemini.hay_clave()
     voces = [{"id": vid, "nombre": v["nombre"], "pais": "Gemini", "genero": v["genero"],
               "detalle": v["detalle"], "gemini": True, "lista": con_clave}
              for vid, v in gemini.VOCES.items()]
+    voces += [{"id": vid, "nombre": nombre, "pais": pais, "genero": genero,
+               "detalle": "gratis, sin clave", "gemini": False, "lista": True}
+              for vid, nombre, pais, genero in GRATIS]
     voces.append({"id": JORGE, "nombre": "Jorge", "pais": "México", "genero": "hombre",
                   "detalle": "gratis, sin clave", "gemini": False, "lista": True})
     return voces
