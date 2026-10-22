@@ -1,20 +1,26 @@
 # VideoFree
 
-De un texto a un vídeo narrado, con imágenes y movimiento, **sin pagar nada por vídeo**.
-Corre en tu computador, y lo pesado (imágenes, voz natural y movimiento IA) va a la
-**GPU gratis de Kaggle de cada persona**: 30 horas a la semana por cuenta.
+De un tema a un vídeo narrado, con imágenes en tu estilo y movimiento de cámara, **sin pagar
+nada por vídeo**. Corre en tu computador, sin GPU. Con **una clave de Google Gemini u OpenAI**
+el guion y las imágenes salen solos (las imágenes de Gemini piden facturación activada en Google);
+sin clave también funciona.
 
 ```
-Tu texto  →  1 Guion  →  2 Voz  →  3 Imágenes  →  4 Movimiento IA  →  5 Montaje  →  video_final.mp4
+Tema + línea gráfica  →  1 Guion  →  2 Voz  →  3 Imágenes  →  4 Montaje  →  video_final.mp4
 ```
 
-| Paso | Con qué | Dónde corre |
+Das el **tema** y la **línea gráfica** (un texto de estilo y/o **una imagen de ejemplo**) y
+VideoFree hace el resto. Y si una escena no te gusta, **en esa escena subes tu propia imagen**:
+el resto del vídeo sigue automático.
+
+| Paso | Con tu clave de Gemini | Sin clave |
 |---|---|---|
-| Guion (escenas, estilo, personajes) | ChatGPT pegado a mano, CLI de Claude u Ollama | tu PC / tu cuenta |
-| Voz | 45 voces edge-tts en español (Colombia, México, España…) o **Chatterbox**, una voz más natural que además puede clonar **tu** voz | tu PC / tu Kaggle |
-| Imágenes | FLUX.2 [klein] con personajes iguales en todo el vídeo, Pollinations, o pegadas a mano | tu Kaggle / internet |
-| Movimiento | LTX-Video: la escena se anima con la cámara quieta | tu Kaggle |
-| Montaje | ffmpeg, con subtítulos y música opcional | tu PC |
+| Guion (escenas, estilo, personajes) | Gemini, automático | Copias un prompt en ChatGPT y pegas la respuesta |
+| Voz | **Puck** (hombre, animado), **Charon** (hombre, narrador), **Kore** (mujer) o **Jorge** | **Jorge** (México), gratis y sin clave |
+| Imágenes | Gemini u OpenAI, copiando el estilo de tu imagen de ejemplo y con los mismos personajes en todo el vídeo | Pollinations, gratis y sin cuenta |
+| Montaje | **Efecto 3D de profundidad** en tu PC (Depth Anything V2 Small, sin GPU), subtítulos y música opcional | igual |
+
+Alternativas para el guion (en Ajustes): el CLI de Claude (con tu suscripción) u Ollama (local).
 
 ---
 
@@ -25,9 +31,8 @@ Tu texto  →  1 Guion  →  2 Voz  →  3 Imágenes  →  4 Movimiento IA  → 
 1. **Python 3.12**: bájalo de [python.org/downloads](https://www.python.org/downloads/).
    Al instalarlo, marca **«Add python.exe to PATH»**.
 2. **Git**: desde [git-scm.com](https://git-scm.com/download/win). Si no quieres instalar Git,
-   puedes usar el botón verde **Code → Download ZIP** de esta página y descomprimir el ZIP.
-3. **Una cuenta de Kaggle** (gratis) en [kaggle.com](https://www.kaggle.com). Es opcional,
-   pero sin ella no hay voz natural, imágenes con personajes iguales ni movimiento IA.
+   usa el botón verde **Code → Download ZIP** de esta página y descomprime el ZIP.
+3. **Una cuenta de Google** para sacar tu clave gratis de Gemini (opcional, pero recomendada).
 
 ### 2. Descargar e instalar
 
@@ -42,51 +47,40 @@ iniciar.bat
 La primera vez tarda 1–2 minutos porque instala lo necesario. Después se abre solo
 **http://127.0.0.1:8031/** en tu navegador. Las siguientes veces basta con doble clic en `iniciar.bat`.
 
-### 3. Seguir el asistente
+### 3. El asistente (4 pasos)
 
-No hace falta crear cuenta: la app entra directo con un usuario local de tu PC, y tus
-claves y tus vídeos se guardan con él. Al abrirla por primera vez se abre el **asistente** de 7 pasos:
+No hace falta crear cuenta: la app entra directo con un usuario local de tu PC. La primera vez
+se abre el **asistente**:
 
-1. **Bienvenida.**
-2. **Equipo**: comprueba solo que todo esté instalado.
-3. **Quién escribe el guion**: si no tienes nada instalado, elige **ChatGPT (a mano)**.
-4. **De dónde salen las imágenes**: «GPU Kaggle» si vas a conectar Kaggle, si no Pollinations.
-5. **GPU de Kaggle**: pegas tu usuario y token y pulsas **Probar la GPU** (ver el paso 4).
-6. **Voz**: eliges país y voz, y la escuchas antes de decidir.
-7. **Listo.**
+1. **Tu equipo**: comprueba solo que todo funcione.
+2. **Clave de Gemini**: entra en [aistudio.google.com/apikey](https://aistudio.google.com/apikey),
+   pulsa **Create API key**, cópiala, pégala en la app y pulsa **Probar y guardar**.
+   Si no quieres clave, pulsa **Seguir sin clave**.
+3. **Voz**: escucha las 4 voces (▶) y elige una.
+4. **Listo.**
 
-Puedes volver a abrir el asistente cuando quieras con el botón **Asistente**.
+La clave se guarda **solo en tu PC**, en `secretos/`, que nunca se sube al repositorio.
+Pégala solo en la app, nunca en un chat. Puedes cambiarla cuando quieras en **Ajustes → Clave Gemini**.
 
-### 4. Conectar tu GPU gratis de Kaggle
-
-1. En kaggle.com, entra a **Settings** y **verifica tu teléfono**. Sin teléfono verificado, Kaggle no da GPU.
-2. En la misma página, sección **API**, pulsa **Generate New Token** y copia el token.
-3. Pega tu **usuario de Kaggle** y el **token** en el asistente, y pulsa **Probar la GPU**.
-
-La GPU es **tuya**: el programa usa tu token y nunca uno compartido. El token se guarda
-solo en tu PC, en `secretos/`, que nunca se sube al repositorio. Si un día Kaggle dice
-«ya no acepta tu token», genera otro y pégalo de nuevo en el asistente.
-
-### 5. Hacer tu primer vídeo
+### 4. Hacer tu primer vídeo
 
 1. En el panel de la izquierda, en **🎙 Voz**, elige la voz.
-2. Debajo, llena **Título**, **Material** (pega el texto, un resumen o las ideas), **Minutos**,
-   y si quieres el **Estilo visual** y el **Tono**.
-3. Deja marcado **«Movimiento IA en todas las escenas»** si quieres que las escenas se muevan.
-4. Pulsa **Crear** y, dentro del vídeo, **Hacer todo**. El registro de abajo dice en qué va,
-   y el tablero (la portada) muestra el estado de todos tus vídeos.
-5. Cuando diga **Listo**, pulsa **Descargar MP4**. Cuando lo subas a YouTube, márcalo como publicado.
+2. Llena **Título**, **Tema** (pega un texto, un resumen o tus ideas) y **Minutos**.
+3. **Línea gráfica**: escribe el estilo (p. ej. «ilustración acuarela, colores cálidos») y/o
+   **sube una imagen de ejemplo**: todas las imágenes copiarán su estilo, no su contenido.
+4. Elige el **Tono** (humor, documental, infantil, inspirador, misterio…).
+5. Deja marcado **«Hacerlo todo solo al crear»** y pulsa **Crear**. El registro de abajo dice
+   en qué va.
+6. ¿Una escena no te gusta? Pulsa **Subir mi imagen** (o **Ctrl+V** con el ratón encima) y pon
+   la tuya. Queda marcada **Tu imagen** y no se vuelve a generar. Luego pulsa **4 · Animar y montar MP4**.
+7. Cuando diga **Listo**, pulsa **Descargar MP4**. Cuando lo subas a YouTube, márcalo como publicado.
 
-Si es tu primera vez, marca **Modo prueba**: arma el vídeo en segundos sin IA,
-para que veas cómo queda el montaje.
+Sin clave, el guion se hace con ChatGPT: la app te da el prompt, lo pegas en ChatGPT y pegas su
+respuesta. Después pulsa **Hacer todo**.
 
-### 6. Tu propia voz (opcional)
+Si es tu primera vez, marca **Modo prueba**: arma el vídeo en segundos sin IA, para ver el montaje.
 
-En **🎙 Voz → Tu voz clonada**, graba 15 segundos hablando normal o sube un audio, y marca
-la casilla de permiso. Chatterbox habla con tu voz y tu acento, y lo hace en tu GPU de Kaggle.
-**Clona solo tu voz o la de alguien que te haya dado permiso.**
-
-### 7. Tu canal: foto de perfil y banner
+### 5. Tu canal: foto de perfil y banner
 
 Arriba, en **📺 Mi canal**, sube una foto cualquiera y sale con las medidas de YouTube:
 
@@ -95,8 +89,7 @@ Arriba, en **📺 Mi canal**, sube una foto cualquiera y sale con las medidas de
 | Foto de perfil | **800 × 800** (se ve en círculo de 98 px), máx. 4 MB | Recorte al centro. En fotos verticales, cerca de la cara |
 | Banner | **2560 × 1440**, máx. 6 MB. Zona segura **1546 × 423** | Si la foto es ancha, la llena. Si no, la pone entera en la zona segura sobre un fondo desenfocado |
 
-La vista previa marca qué parte se ve en el ordenador y cuál en el móvil. Descárgalas y súbelas en
-**YouTube Studio → Personalización → Branding**.
+Descárgalas y súbelas en **YouTube Studio → Personalización → Branding**.
 
 ---
 
@@ -112,18 +105,21 @@ Necesitas Python 3.11 o más nuevo (`python3 --version`). Lo demás es igual.
 
 ---
 
-## Instalarlo con Claude Code (el skill)
+## Instalarlo con Claude Code
 
-Si usas [Claude Code](https://claude.com/claude-code), puede instalarlo por ti:
-
-**Opción A, en un solo mensaje.** Abre Claude Code en la carpeta donde lo quieras y escribe:
+Si usas [Claude Code](https://claude.com/claude-code), abre Claude Code en la carpeta donde lo
+quieras y **pega este mensaje**:
 
 ```
 Instala VideoFree desde https://github.com/charlieroa/videofree siguiendo su skill
 en skill/videofree/SKILL.md, déjalo abierto en el navegador y guíame en el asistente.
 ```
 
-**Opción B, dejar el skill instalado** para usarlo cuando quieras con `/videofree`:
+Claude comprueba Python, descarga el repo, instala lo necesario, arranca la app y te acompaña
+en el asistente. **Tu clave de Gemini la pegas tú en VideoFree**: Claude no te la pide y no
+debes pegarla en el chat.
+
+Para dejar el skill instalado y usarlo cuando quieras con `/videofree`:
 
 ```bat
 git clone https://github.com/charlieroa/videofree.git
@@ -133,36 +129,31 @@ copy videofree\skill\videofree\SKILL.md %USERPROFILE%\.claude\skills\videofree\
 
 (En Mac/Linux: `mkdir -p ~/.claude/skills/videofree && cp videofree/skill/videofree/SKILL.md ~/.claude/skills/videofree/`.)
 
-El skill comprueba Python, descarga el repo, instala lo necesario, arranca la app y te
-acompaña en el paso de Kaggle. **Tu token de Kaggle lo pegas tú en la app**: el skill no te lo pide.
-
 ---
 
 ## Qué esperar, sin adornos
 
-- **Tiempos**, medidos en una cuenta real con 2× T4: cada imagen tarda unos 15 s y cada clip con
-  movimiento unos 30 s. Cada trabajo de Kaggle tarda además unos 4–5 minutos en arrancar.
-  Un vídeo de 15 minutos gasta 1–2 horas de las 30 semanales.
-- **Cola de Kaggle**: en horas pico, Kaggle puede tardar en darte la GPU. El programa espera,
-  avisa cada 5 minutos y, si una GPU no sale, pide la otra (T4 ↔ P100). Kaggle deja como
-  máximo **2 trabajos de GPU a la vez** por cuenta.
-- **Movimiento**: el modelo que cabe gratis (LTX-Video 2B) hace un movimiento **suave**
-  (respirar, gestos, humo, luz). En objetos pequeños a veces se deforma. No es Sora ni Kling.
-- **Voces**: las de edge-tts son claras, pero algo robóticas. La más natural es **Chatterbox
-  clonando tu voz**.
+- **Cuota gratis de Gemini**: el guion y la voz entran de sobra en el plan gratis para vídeos
+  cortos y medianos; si Google pide esperar, la app espera y reintenta sola. **Las imágenes de
+  Gemini no tienen cuota gratis** (Google las deja en 0 sin facturación): con una clave gratis
+  las imágenes salen de Pollinations y el registro lo avisa. Si activas la facturación en AI
+  Studio, salen de Gemini con tu estilo y tus personajes.
+- **Pollinations**: una imagen cada ~45 s. Un vídeo de 14 min (~85 imágenes) ≈ 1 hora, solo.
+- **Voces**: Jorge es clara pero algo robótica. Las de Gemini suenan más naturales y siguen el
+  tono del vídeo (humor, documental, infantil…).
 
 ## Problemas comunes
 
 | Síntoma | Solución |
 |---|---|
 | `py` no se reconoce | Instala Python 3.12 marcando «Add to PATH» y abre otra terminal |
-| «Kaggle ya no acepta tu token» | Genera uno nuevo en kaggle.com/settings y pégalo en el asistente |
-| «Sin GPU: verifica el teléfono» | Verifica tu teléfono en Kaggle → Settings |
-| «2 trabajos de GPU (su máximo)» | Espera: el programa reintenta solo cuando se libera un hueco |
-| Se queda en `queued` | Es la cola de Kaggle. Si pasan 10 min, el programa cambia de GPU solo |
+| «Gemini no acepta esa clave» | Crea otra en aistudio.google.com/apikey y pégala en el asistente |
+| «Se acabó la cuota gratis de Gemini» | Espera un rato (el cupo por minuto se libera solo; el diario, al día siguiente) o usa Jorge |
+| «Tu clave no tiene cuota gratis para imágenes» | Normal en el plan gratis: siguen con Pollinations |
+| El puerto 8031 está ocupado | `.venv\Scripts\python app.py --puerto 8032` y abre ese puerto |
 
-Los detalles técnicos (modelos, parámetros, tiempos y cómo está hecho cada paso)
-están en [docs/TECNICO.md](docs/TECNICO.md).
+Los detalles técnicos (modelos, parámetros y cómo está hecho cada paso) están en
+[docs/TECNICO.md](docs/TECNICO.md).
 
 ## Estructura
 
@@ -170,7 +161,7 @@ están en [docs/TECNICO.md](docs/TECNICO.md).
 iniciar.bat / iniciar.sh   instalar y arrancar
 app.py                     servidor (FastAPI)
 web/index.html             la pantalla
-motor/                     guion, voz, imágenes, clips, montaje, canal y la conexión con Kaggle
+motor/                     gemini, guion, voz, imágenes, montaje y canal
 config.json                ajustes globales (sin claves)
 skill/videofree/SKILL.md   el skill para Claude Code
 ```

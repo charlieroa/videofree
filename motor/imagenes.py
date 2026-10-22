@@ -1,25 +1,36 @@
 """
-Paso 3: una imagen por escena, gratis.
+Paso 3: una imagen por escena.
 
-Tres formas de conseguirla (config.json -> imagen.motor, o cada escena a mano):
+Formas de conseguirla (config.json -> imagen.motor, o cada escena a mano):
 
+  gemini        Gemini imagen (el modelo gemini-*-flash-image mas nuevo) con la
+                clave de la persona. Lleva como referencia la IMAGEN DE EJEMPLO
+                del estilo (si la subio) y la HOJA DE PERSONAJES del video, para
+                que caras y ropa no cambien de una escena a otra. Sin clave, o si
+                se acaba la cuota, sigue con Pollinations.
+  openai        gpt-image con la clave de OpenAI de la persona (de pago, centimos
+                por imagen). Mismas referencias que Gemini: imagen de ejemplo y
+                hoja de personajes. Si hay clave de OpenAI se prefiere a Gemini,
+                porque la capa gratis de Gemini no da cuota de imagenes.
   pollinations  Flux por la API publica de Pollinations: gratis, sin clave,
                 una cada ~45 s por IP. Con una clave (enter.pollinations.ai)
                 va sin marca de agua.
   manual        Las haces tu donde quieras (ChatGPT gratis, Gemini, Bing...)
                 y las pegas en la escena. La pantalla te da el prompt listo
                 para copiar.
-  kaggle        En la GPU gratis de Kaggle de la persona, con FLUX.2 [klein] 4B:
-                sin cupo, mejor calidad, y una hoja de personajes como imagen
-                de referencia para que salgan iguales (motor/imagenes_gpu.py).
   prueba        Imagenes de prueba dibujadas aqui, para probar el montaje.
 
+Y en cualquier escena, con cualquier motor, la persona puede subir o pegar SU
+imagen: queda marcada como propia y «Imagenes» / «Hacer todo» no la pisan.
+
 Como se parecen entre si: el prompt de cada imagen lleva SIEMPRE el mismo
-estilo y la misma descripcion de cada personaje, y la misma semilla. Y las
-escenas 'continua' no piden imagen: reusan la de la anterior y el montaje le
-da otro movimiento de camara.
+estilo y la misma descripcion de cada personaje (la «biblia» del guion), y con
+Gemini ademas la hoja de personajes como imagen. Las escenas 'continua' no piden
+imagen: reusan la de la anterior y el montaje le da otro movimiento de camara.
 """
 import base64
+import hashlib
+import json
 import re
 import time
 import urllib.parse
@@ -27,7 +38,7 @@ import urllib.parse
 import requests
 from PIL import Image, ImageDraw, ImageFont
 
-from . import proyecto
+from . import gemini, openai_img, proyecto
 
 _ultima_llamada = [0.0]
 
@@ -120,7 +131,76 @@ def _prueba(texto, destino, n):
     img.save(destino)
 
 
-# ------------------------------------------------------------- el paso
+# ------------------------------------------------- hoja de personajes (Gemini)
+# 1. Primero se genera una HOJA DE PERSONAJES del proyecto: todos los personajes
+#    de la biblia, de cuerpo entero, de frente, en el estilo del video y sobre un
+#    fondo liso (imagenes/hoja.jpg; se ve en «Estilo y personajes»).
+# 2. Cada escena con personajes se genera pasando esa hoja como referencia.
+# 3. Si la biblia (estilo o personajes) o la imagen de ejemplo cambian, la hoja
+#    se rehace sola.
+
+def _personajes(datos):
+    return [p for p in ((datos.get("biblia") or {}).get("personajes") or [])
+            if p.get("nombre") and p.get("descripcion_visual")]
+
+
+def firma_hoja(datos):
+    """Cambia si cambia lo que sale en la hoja: entonces hay que rehacerla."""
+    b = datos.get("biblia") or {}
+    base = json.dumps([b.get("estilo_visual", ""), _personajes(datos), datos.get("referencia")],
+                      ensure_ascii=False, sort_keys=True)
+    return hashlib.sha1(base.encode("utf-8")).hexdigest()[:12]
+
+
+def prompt_hoja(datos):
+    b = datos.get("biblia") or {}
+    pj = _personajes(datos)
+    lista = "; ".join(f"{p['nombre']}: {p['descripcion_visual']}" for p in pj)
+    cuantos = "one character" if len(pj) == 1 else f"{len(pj)} characters side by side, clearly separated"
+    texto = (f"Character reference sheet, {cuantos}, each one full body, standing, facing the "
+             f"viewer, neutral friendly expression, whole figure visible from head to feet. "
+             f"Characters: {lista}. Plain flat light grey background, nothing else in the image. ")
+    if b.get("estilo_visual"):
+        texto += f"Style: {b['estilo_visual']}. "
+    texto += "No text, no labels, no letters, no watermark"
+    return texto[:2000]
+
+
+def usa_hoja(datos, e):
+    nombres = {p["nombre"] for p in _personajes(datos)}
+    return any(n in nombres for n in e.get("personajes") or [])
+
+
+def prompt_escena(datos, e, nota="", con_hoja=False, con_estilo=False):
+    """El prompt de una escena para Gemini, diciendo para que sirve cada referencia."""
+    base = prompt_de(datos, e)
+    if con_estilo and con_hoja:
+        guia = "Reference images: the first is the STYLE example, the second is the CHARACTER SHEET. "
+    elif con_estilo:
+        guia = "Reference image: the STYLE example. "
+    elif con_hoja:
+        guia = "Reference image: the CHARACTER SHEET. "
+    else:
+        guia = ""
+    if con_estilo:
+        guia += ("Copy only the visual style of the STYLE example (art technique, color palette, "
+                 "lighting, line work, texture); do not copy its subject, characters or composition. ")
+    base = guia + base
+    if con_hoja:
+        quienes = ", ".join(n for n in e.get("personajes") or [])
+        base = (f"{base}. {quienes} must look exactly like in the CHARACTER SHEET: "
+                f"same face, head shape, hair, beard and body, and the same clothes unless "
+                f"this scene describes different clothes. Use the sheet only for the "
+                f"characters' look, not for the background or the pose")
+    if _personajes(datos):
+        # Medido: sin esto, la gente del fondo sale con ropa moderna (polos, vaqueros)
+        # aunque el protagonista vaya de romano.
+        base += (". Everybody else in the scene wears clothing from the same time period and "
+                 "culture as the main characters, no modern clothes")
+    if nota:
+        base += f". {nota}"
+    return base[:2500]
+
 
 def _carpeta(datos):
     c = proyecto.carpeta(datos["id"]) / "imagenes"
@@ -128,37 +208,131 @@ def _carpeta(datos):
     return c
 
 
-def generar_una(datos, e, avisar, nota=""):
-    motor = "prueba" if datos.get("simular") else proyecto.config()["imagen"]["motor"]
+def hoja_vale(datos):
+    return bool(datos.get("hoja") and datos.get("hoja_firma") == firma_hoja(datos)
+                and proyecto.absoluta(datos, datos["hoja"]).is_file())
+
+
+def referencia(datos):
+    """La imagen de ejemplo del estilo, si la persona subio una."""
+    ruta = datos.get("referencia") and proyecto.absoluta(datos, datos["referencia"])
+    return ruta if ruta and ruta.is_file() else None
+
+
+def _asegurar_hoja(datos, avisar):
+    """La hoja de personajes (se genera si falta o si cambio). None si no hay personajes."""
+    if not _personajes(datos):
+        return None
+    if hoja_vale(datos):
+        return proyecto.absoluta(datos, datos["hoja"])
+    ref = referencia(datos)
+    avisar(f"{_NOMBRE.get(motor_efectivo(datos), 'La IA')} dibuja la hoja de personajes" + (" (con tu imagen de ejemplo)" if ref else "") + "...")
+    prompt = prompt_hoja(datos)
+    if ref:
+        prompt = ("Reference image: the STYLE example. Copy only its visual style (technique, "
+                  "palette, lighting); do not copy its subject. " + prompt)
+    destino = _carpeta(datos) / "hoja.jpg"
+    _ia(motor_efectivo(datos)).imagen(prompt, destino, [ref] if ref else [], avisar)
+    datos["hoja"] = proyecto.relativa(datos, destino)
+    datos["hoja_firma"] = firma_hoja(datos)
+    proyecto.guardar(datos)
+    avisar("Hoja de personajes lista (imagenes/hoja.jpg).")
+    return destino
+
+
+_NOMBRE = {"gemini": "Gemini", "openai": "OpenAI", "pollinations": "Pollinations"}
+_ERRORES = (gemini.ErrorGemini, openai_img.ErrorOpenAI)
+_CUOTA = (gemini.ErrorCuota, openai_img.ErrorCuota)
+
+
+def _ia(motor):
+    """El modulo que dibuja: los dos tienen imagen(prompt, destino, referencias, avisar)."""
+    return openai_img if motor == "openai" else gemini
+
+
+def _con_ia(datos, e, destino, avisar, nota, hoja, motor):
+    ref = referencia(datos)
+    con_hoja = bool(hoja and usa_hoja(datos, e))
+    refs = ([ref] if ref else []) + ([hoja] if con_hoja else [])
+    _ia(motor).imagen(prompt_escena(datos, e, nota, con_hoja, bool(ref)), destino, refs, avisar)
+
+
+# ------------------------------------------------------------- el paso
+
+def motor_efectivo(datos=None):
+    """El motor que de verdad se usa. Con «gemini» (el de serie) y clave de OpenAI,
+    OpenAI: la capa gratis de Gemini da cuota 0 de imagenes. Sin ninguna clave,
+    Pollinations."""
+    if datos and datos.get("simular"):
+        return "prueba"
+    motor = proyecto.config()["imagen"]["motor"]
+    if motor in ("gemini", "openai"):
+        if openai_img.hay_clave():
+            return "openai"
+        if motor == "gemini" and gemini.hay_clave():
+            return "gemini"
+        return "pollinations"
+    return motor
+
+
+def generar_una(datos, e, avisar, nota="", motor=None, hoja=None):
+    motor = motor or motor_efectivo(datos)
     destino = _carpeta(datos) / f"escena_{e['n']:03d}.jpg"
     if motor == "prueba":
         destino = destino.with_suffix(".png")
         _prueba(e["narracion"], destino, e["n"])
+    elif motor in ("gemini", "openai"):
+        _con_ia(datos, e, destino, avisar, nota, hoja, motor)
     elif motor == "pollinations":
         prompt = prompt_de(datos, e) + (f". {nota}" if nota else "")
         _pollinations(prompt, destino, e["n"], avisar)
     else:
         return False                    # manual: la pega la persona
     e["imagen"] = proyecto.relativa(datos, destino)
+    e["propia"] = False
     proyecto.quitar_clip(e)
     datos["mp4"] = None
     proyecto.guardar(datos)
     return True
 
 
-def pegar(datos, e, data_url):
-    """Una imagen hecha fuera (ChatGPT...) pegada o subida desde la pantalla."""
+def _guardar_data_url(data_url, destino_sin_ext):
     cabecera, _, cuerpo = data_url.partition(",")
     if not cabecera.startswith("data:image/"):
         raise ErrorImagen("eso no es una imagen")
     ext = cabecera.split("/")[1].split(";")[0].replace("jpeg", "jpg")
-    destino = _carpeta(datos) / f"escena_{e['n']:03d}_propia.{ext}"
-    destino.write_bytes(base64.b64decode(cuerpo))
-    with Image.open(destino) as im:           # que de verdad se abra
-        im.verify()
+    if ext not in ("jpg", "png", "webp", "gif", "bmp"):
+        raise ErrorImagen(f"formato {ext} no soportado (usa JPG, PNG o WEBP)")
+    crudo = base64.b64decode(cuerpo)
+    if len(crudo) > 25 * 1024 * 1024:
+        raise ErrorImagen("la imagen pesa más de 25 MB")
+    destino = destino_sin_ext.with_name(f"{destino_sin_ext.name}.{ext}")
+    destino.write_bytes(crudo)
+    try:
+        with Image.open(destino) as im:           # que de verdad se abra
+            im.verify()
+    except Exception:
+        destino.unlink(missing_ok=True)
+        raise ErrorImagen("no se puede abrir como imagen")
+    return destino
+
+
+def pegar(datos, e, data_url):
+    """Una imagen de la persona (hecha fuera, o una foto suya) para una escena."""
+    destino = _guardar_data_url(data_url, _carpeta(datos) / f"escena_{e['n']:03d}_propia")
     e["imagen"] = proyecto.relativa(datos, destino)
+    e["propia"] = True
     proyecto.quitar_clip(e)
     datos["mp4"] = None
+    proyecto.guardar(datos)
+
+
+def poner_referencia(datos, data_url):
+    """La IMAGEN DE EJEMPLO del estilo (o quitarla con data_url vacio)."""
+    for viejo in _carpeta(datos).glob("referencia.*"):
+        viejo.unlink(missing_ok=True)
+    datos["referencia"] = (proyecto.relativa(datos, _guardar_data_url(data_url, _carpeta(datos) / "referencia"))
+                           if data_url else None)
     proyecto.guardar(datos)
 
 
@@ -173,30 +347,39 @@ def resolver_continuas(datos):
         previa = e["imagen"]
 
 
-def ejecutar(datos, avisar, solo=None, nota="", ejecutor=None):
-    motor = proyecto.config()["imagen"]["motor"]
-    if datos.get("simular"):
-        if motor == "kaggle" and ejecutor is None:
-            # Modo prueba con el motor GPU: la tanda entera se simula en este PC
-            # (mismo script, misma salida que Kaggle, imagenes dibujadas), como clips.
-            from . import imagenes_gpu
-            ejecutor = imagenes_gpu._simular_kaggle
-        elif motor != "kaggle":
-            motor = "prueba"
+def ejecutar(datos, avisar, solo=None, nota=""):
+    elegido = proyecto.config()["imagen"]["motor"]
+    motor = motor_efectivo(datos)
+    if elegido in ("gemini", "openai") and motor == "pollinations":
+        avisar("Sin clave de Gemini ni de OpenAI: las imágenes salen de Pollinations (gratis). "
+               "Pega tu clave en el Asistente para usar la IA.")
     propias = [e for e in datos["escenas"] if not e["continua"]]
+    # Sin 'solo' se hacen las que faltan: las que subio la persona no se tocan.
     pendientes = [e for e in propias if (e["n"] in solo if solo else not e["imagen"])]
     if motor == "manual" and not solo:
         avisar(f"Motor manual: pega tus imagenes en las {len(pendientes)} escenas que faltan.")
-    if motor == "kaggle":
-        # Todas en UNA tanda de Kaggle (el arranque se paga una vez), con la hoja
-        # de personajes como referencia. Ver motor/imagenes_gpu.py.
-        from . import imagenes_gpu
-        imagenes_gpu.ejecutar(datos, pendientes, avisar, nota if solo else "", ejecutor)
-        pendientes = []
+    nota = nota if solo else ""
+    hoja = None
+    if motor in ("gemini", "openai") and any(usa_hoja(datos, e) for e in pendientes):
+        try:
+            hoja = _asegurar_hoja(datos, avisar)
+        except _CUOTA as err:
+            avisar(f"{err} Sigo con Pollinations.")
+            motor = "pollinations"
+        except _ERRORES as err:
+            avisar(f"La hoja de personajes ha fallado ({err}); las escenas van sin ella.")
     for i, e in enumerate(pendientes, 1):
-        if motor == "pollinations":
-            avisar(f"Imagen escena {e['n']} ({i}/{len(pendientes)})")
-        generar_una(datos, e, avisar, nota if solo else "")
+        if motor in _NOMBRE:
+            avisar(f"Imagen escena {e['n']} ({i}/{len(pendientes)}) con {_NOMBRE[motor]}")
+        try:
+            generar_una(datos, e, avisar, nota, motor, hoja)
+        except _CUOTA as err:
+            avisar(f"{err} Sigo con Pollinations.")
+            motor = "pollinations"
+            generar_una(datos, e, avisar, nota, motor)
+        except _ERRORES as err:
+            avisar(f"{_NOMBRE[motor]} no pudo con la escena {e['n']} ({err}); la hago con Pollinations.")
+            generar_una(datos, e, avisar, nota, "pollinations")
     resolver_continuas(datos)
     proyecto.guardar(datos)
     avisar("Imagenes listas." if all(e["imagen"] for e in datos["escenas"])
@@ -209,14 +392,12 @@ def estimar(datos):
     if not datos["escenas"]:
         n = max(3, round(datos["minutos"] * 60 / proyecto.config()["guion"]["segundos_por_escena"]))
         faltan = round(n * 0.7)
-    por_imagen = 8 if proyecto.secretos().get("pollinations_token") else cfg["espera_s"]
-    if cfg["motor"] == "kaggle":
-        from . import imagenes_gpu
-        minutos = imagenes_gpu.estimar_min(faltan)
+    motor = motor_efectivo(datos)
+    if motor in ("gemini", "openai"):
+        por_imagen = 15 if motor == "gemini" else 30
     else:
-        minutos = round(faltan * por_imagen / 60, 1)
+        por_imagen = 8 if proyecto.secretos().get("pollinations_token") else cfg["espera_s"]
     return {"imagenes": faltan,
-            "minutos_imagenes": 0 if datos.get("simular") or cfg["motor"] == "manual"
-            else minutos,
-            "motor": "prueba" if datos.get("simular") else cfg["motor"],
+            "minutos_imagenes": 0 if motor in ("prueba", "manual") else round(faltan * por_imagen / 60, 1),
+            "motor": motor,
             "simular": bool(datos.get("simular"))}

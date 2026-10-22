@@ -8,8 +8,8 @@ el programa no saque a nadie. Los dos ficheros estan en .gitignore.
 
 ACTUAL es el usuario de la peticion o del trabajo en curso. Lo pone el
 middleware de app.py en cada peticion y _correr en cada hilo de trabajo; de el
-dependen los secretos (proyecto.secretos) y la GPU (gpu.credenciales), que son
-de cada persona.
+dependen los secretos (proyecto.secretos: la clave de Gemini...), que son de
+cada persona.
 
 Modo local (el normal): quien abre la app desde el mismo PC entra sin cuenta.
 Si no hay usuarios se crea uno llamado "local" sin contrasena; si hay uno, se

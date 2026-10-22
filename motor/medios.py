@@ -1,6 +1,7 @@
 """ffmpeg: el que trae imageio-ffmpeg, para no depender de instalar nada en Windows."""
 import re
 import subprocess
+import tempfile
 
 import imageio_ffmpeg
 
@@ -16,6 +17,27 @@ def ffmpeg(*args, cwd=None):
                        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=cwd)
     if r.returncode != 0:
         raise ErrorMedios(r.stderr.strip()[-800:] or "ffmpeg fallo")
+
+
+def ffmpeg_cuadros(cuadros, *args, cwd=None):
+    """ffmpeg leyendo fotogramas en crudo (arrays BGR) por la entrada estandar ('-i -')."""
+    with tempfile.TemporaryFile() as errores:     # a fichero: un pipe lleno bloquearia a ffmpeg
+        p = subprocess.Popen([FFMPEG, "-hide_banner", "-loglevel", "error", "-y", *map(str, args)],
+                             stdin=subprocess.PIPE, stderr=errores, cwd=cwd)
+        try:
+            for c in cuadros:
+                p.stdin.write(memoryview(c))
+        except OSError:                           # ffmpeg murio: el motivo queda en errores
+            pass
+        finally:
+            try:
+                p.stdin.close()
+            except OSError:
+                pass
+            p.wait()
+        if p.returncode != 0:
+            errores.seek(0)
+            raise ErrorMedios(errores.read().decode("utf-8", "replace").strip()[-800:] or "ffmpeg fallo")
 
 
 def duracion(ruta):

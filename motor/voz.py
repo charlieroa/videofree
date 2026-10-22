@@ -1,7 +1,12 @@
 """
-Paso 2: la voz de cada escena, con las voces neuronales de Microsoft (edge-tts).
+Paso 2: la voz de cada escena.
 
-Gratis y sin clave. Se sintetiza escena a escena porque la duracion de cada
+El catalogo son 4 voces:
+  - Jorge (Mexico): es-MX-JorgeNeural de edge-tts (Microsoft). Gratis y sin clave.
+  - Puck, Charon y Kore: Gemini TTS, con la clave de Gemini de la persona. El
+    tono del video se da con un prefijo corto en el propio texto (motor/gemini.py).
+
+Los proyectos viejos con otra voz de edge-tts siguen funcionando. Se sintetiza escena a escena porque la duracion de cada
 audio es la que manda: la animacion de cada imagen dura lo que dura su frase.
 
 En modo prueba no se llama a nada: se pone silencio con la duracion que
@@ -9,64 +14,44 @@ tendria la frase leida.
 """
 import asyncio
 import re
-import time
 
 import edge_tts
 
-from . import medios, proyecto, voz_gpu
+from . import gemini, medios, proyecto
 
 PALABRAS_POR_SEGUNDO = 2.2
 FORMATO = re.compile(r"^[a-z]{2}-[A-Z]{2}-[A-Za-z]+Neural$")
+JORGE = "es-MX-JorgeNeural"
 FRASE_MUESTRA = "Hola, así va a sonar la narración de tu video. ¿Te gusta cómo suena?"
-PAISES = {"AR": "Argentina", "BO": "Bolivia", "CL": "Chile", "CO": "Colombia", "CR": "Costa Rica",
-          "CU": "Cuba", "DO": "Rep. Dominicana", "EC": "Ecuador", "ES": "España", "GQ": "Guinea Ecuatorial",
-          "GT": "Guatemala", "HN": "Honduras", "MX": "México", "NI": "Nicaragua", "PA": "Panamá",
-          "PE": "Perú", "PR": "Puerto Rico", "PY": "Paraguay", "SV": "El Salvador", "US": "Estados Unidos",
-          "UY": "Uruguay", "VE": "Venezuela"}
-_catalogo = {"hora": 0, "voces": None}
-
-
-def _ficha(corto, genero):
-    _, pais, nombre = corto.split("-", 2)
-    return {"id": corto, "nombre": nombre.replace("Neural", ""), "pais": PAISES.get(pais, pais),
-            "genero": {"Female": "mujer", "Male": "hombre"}.get(genero, "")}
-
-
-def catalogo(respaldo):
-    """Las voces en español de edge-tts, con nombre, país y si es hombre o mujer.
-
-    Se piden a Microsoft una vez al día; sin red, sale la lista corta de config.
-    """
-    if _catalogo["voces"] and time.time() - _catalogo["hora"] < 86400:
-        return _catalogo["voces"]
-    try:
-        todas = asyncio.run(edge_tts.list_voices())
-        voces = [_ficha(v["ShortName"], v["Gender"]) for v in todas
-                 if v["Locale"].startswith("es-") and FORMATO.match(v["ShortName"])]
-        _catalogo.update(hora=time.time(), voces=sorted(voces, key=lambda v: (v["pais"], v["nombre"])))
-        return _catalogo["voces"]
-    except Exception:
-        return [_ficha(v, "") for v in respaldo]
+def catalogo():
+    """Las 4 voces: Jorge (gratis, sin clave) y las 3 de Gemini."""
+    con_clave = gemini.hay_clave()
+    voces = [{"id": JORGE, "nombre": "Jorge", "pais": "México", "genero": "hombre",
+              "detalle": "gratis, sin clave", "gemini": False, "lista": True}]
+    for vid, v in gemini.VOCES.items():
+        voces.append({"id": vid, "nombre": v["nombre"], "pais": "Gemini", "genero": v["genero"],
+                      "detalle": v["detalle"], "gemini": True, "lista": con_clave})
+    return voces
 
 
 def valida(voz_id):
-    return bool(FORMATO.match(voz_id or "")) or voz_gpu.es_suya(voz_id)
+    return bool(FORMATO.match(voz_id or "")) or gemini.es_suya(voz_id)
 
 
 def muestra(voz_id):
     """Un mp3 corto con esa voz para escucharla antes de elegirla. Se guarda y se reusa."""
-    if voz_gpu.es_suya(voz_id):                       # Chatterbox: lo que dijo en la última prueba
-        if voz_gpu.ruta_prueba(voz_id).exists():
-            return voz_gpu.ruta_prueba(voz_id)
-        if voz_id == "chatterbox:clon" and voz_gpu.hay_muestra():
-            return voz_gpu.ruta_muestra()             # aún sin prueba: tu grabación
-        raise ValueError("Esta voz aún no tiene muestra: pulsa «Probar en mi GPU».")
-    if not FORMATO.match(voz_id or ""):
+    if not valida(voz_id):
         raise ValueError("Esa voz no existe.")
     carpeta = proyecto.RAIZ / "voces_muestra"
     carpeta.mkdir(exist_ok=True)
-    destino = carpeta / f"{voz_id}.mp3"
-    if not destino.exists() or destino.stat().st_size == 0:
+    destino = carpeta / f"{voz_id.replace(':', '_')}.mp3"
+    if destino.exists() and destino.stat().st_size > 0:
+        return destino
+    if gemini.es_suya(voz_id):
+        if not gemini.hay_clave():
+            raise ValueError("Esta voz es de Gemini: pega tu clave en el Asistente para escucharla.")
+        gemini.voz(FRASE_MUESTRA, voz_id, destino)
+    else:
         asyncio.run(_sintetizar(FRASE_MUESTRA, voz_id, "+0%", destino))
     return destino
 
@@ -81,22 +66,14 @@ def _silencio(texto, destino):
                   "-b:a", "64k", destino)
 
 
-def ejecutar(datos, avisar, solo=None, ejecutor=None):
+def ejecutar(datos, avisar, solo=None):
     cfg = proyecto.config()["voz"]
     elegida = datos.get("voz") or cfg["voz"]          # la del video; si no tiene, la de Ajustes
     carpeta = proyecto.carpeta(datos["id"]) / "voz"
     carpeta.mkdir(exist_ok=True)
-    if voz_gpu.es_suya(elegida) and not datos.get("simular"):
-        if solo:
-            escenas = [e for e in datos["escenas"] if e["n"] in solo]
-        else:                                          # las que aún no tienen voz
-            escenas = [e for e in datos["escenas"]
-                       if not (e["audio"] and proyecto.absoluta(datos, e["audio"]).exists())]
-        if escenas:
-            voz_gpu.ejecutar(datos, avisar, escenas, elegida, ejecutor)
-        else:
-            avisar("Voz: todas las escenas ya están narradas.")
-        return
+    if gemini.es_suya(elegida) and not datos.get("simular") and not gemini.hay_clave():
+        raise RuntimeError("La voz elegida es de Gemini y no hay clave: pégala en el Asistente "
+                           "o cambia a la voz Jorge (gratis, sin clave).")
     for e in datos["escenas"]:
         if solo and e["n"] not in solo:
             continue
@@ -105,6 +82,11 @@ def ejecutar(datos, avisar, solo=None, ejecutor=None):
         destino = carpeta / f"escena_{e['n']:03d}.mp3"
         if datos.get("simular"):
             _silencio(e["narracion"], destino)
+        elif gemini.es_suya(elegida):
+            # Sin reintento propio: gemini._post ya espera ante 429 y corta con un
+            # mensaje claro si se acaba la cuota (no se mezclan voces en un video).
+            avisar(f"Voz escena {e['n']} con Gemini ({elegida.split(':')[1]})")
+            gemini.voz(e["narracion"], elegida, destino, datos.get("tono", ""), avisar)
         else:
             for intento in range(3):
                 try:

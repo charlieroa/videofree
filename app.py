@@ -3,9 +3,10 @@ Video Simple: de un texto a un video narrado con imagenes animadas. Gratis.
 
     python app.py            ->  http://127.0.0.1:8031/
 
-Los pasos (motor/): guion -> voz -> imagenes -> montaje. Cada uno se puede
-lanzar por separado desde la pantalla, y cada escena se puede rehacer sola o
-recibir una imagen pegada a mano (ChatGPT, Gemini...).
+Los pasos (motor/): guion -> voz -> imagenes -> montaje. Con la clave de Gemini
+de la persona (motor/gemini.py) salen solos a partir del tema y la linea grafica
+(texto y/o una imagen de ejemplo). Cada paso se puede lanzar por separado, y cada
+escena se puede rehacer sola o recibir una imagen propia (subida o pegada).
 """
 import argparse
 from pathlib import Path
@@ -24,7 +25,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from motor import canal, clips_gpu, gpu, guion, imagenes, montaje, proyecto, usuarios, voz, voz_gpu
+from motor import canal, gemini, guion, imagenes, montaje, openai_img, proyecto, usuarios, voz
 
 app = FastAPI(title="Video Simple")
 WEB = proyecto.RAIZ / "web"
@@ -67,10 +68,7 @@ app.mount("/ejemplo", StaticFiles(directory=WEB / "ejemplo"), name="ejemplo")
 
 _hilos = {}
 
-PASOS = ("guion", "voz", "imagenes", "clips", "montaje", "todo")
-VOCES = ["es-MX-JorgeNeural", "es-MX-DaliaNeural", "es-ES-AlvaroNeural", "es-ES-ElviraNeural",
-         "es-ES-XimenaNeural", "es-CO-GonzaloNeural", "es-CO-SalomeNeural", "es-US-AlonsoNeural",
-         "es-US-PalomaNeural", "es-AR-TomasNeural", "es-AR-ElenaNeural"]
+PASOS = ("guion", "voz", "imagenes", "montaje", "todo")
 
 
 # ------------------------------------------------------------- trabajos
@@ -94,47 +92,6 @@ def _mio(pid):
     return datos
 
 
-def _juntar_voz_e_imagenes(datos):
-    """En «Hacer todo», ¿van voz e imagenes a Kaggle? Entonces se hacen en UN trabajo."""
-    if datos.get("simular") or not gpu.credenciales():
-        return False
-    cfg = proyecto.config()
-    voz_kaggle = voz_gpu.es_suya(datos.get("voz") or cfg["voz"]["voz"])
-    faltan_voz = any(not e.get("audio") for e in datos["escenas"])
-    faltan_img = any(not e.get("imagen") for e in datos["escenas"] if not e.get("continua"))
-    return voz_kaggle and faltan_voz and cfg["imagen"]["motor"] == "kaggle" and faltan_img
-
-
-def _voz_e_imagenes_juntas(datos, avisar):
-    """Voz e imagenes en hilos, con un Agrupador: hacen cola en Kaggle una sola vez."""
-    dueno = datos.get("dueno")
-    maquina = proyecto.config().get("imagen_gpu", {}).get("machine_shape")
-    agrupador = gpu.Agrupador({"voz", "imagenes"}, avisar, maquina)
-    errores = {}
-
-    def correr(paso, hacer):
-        usuarios.ACTUAL.set(dueno)               # el hilo no hereda el usuario
-        try:
-            hacer()
-        except Exception as err:
-            traceback.print_exc()
-            errores[paso] = err
-        finally:
-            agrupador.terminado(paso)
-
-    hilos = [threading.Thread(target=correr, args=("voz", lambda: voz.ejecutar(
-                 datos, avisar, None, agrupador.ejecutor_de("voz")))),
-             threading.Thread(target=correr, args=("imagenes", lambda: imagenes.ejecutar(
-                 datos, avisar, None, "", agrupador.ejecutor_de("imagenes"))))]
-    for h in hilos:
-        h.start()
-    for h in hilos:
-        h.join()
-    if errores:
-        paso, err = next(iter(errores.items()))
-        raise RuntimeError(f"{paso}: {err}")
-
-
 def _correr(pid, paso, solo, nota):
     datos = proyecto.leer(pid)
     usuarios.ACTUAL.set(datos.get("dueno"))      # el hilo trabaja con las claves del dueno
@@ -143,26 +100,17 @@ def _correr(pid, paso, solo, nota):
         proyecto.anotar(datos, texto)
 
     try:
-        orden = ["guion", "voz", "imagenes", "movimiento", "montaje"] if paso == "todo" else [paso]
-        juntas = False
+        orden = ["guion", "voz", "imagenes", "montaje"] if paso == "todo" else [paso]
         for p in orden:
-            if paso == "todo" and p == "voz" and _juntar_voz_e_imagenes(datos):
-                datos["trabajo"]["paso"] = "voz + imagenes"
-                proyecto.guardar(datos)
-                _voz_e_imagenes_juntas(datos, avisar)
-                juntas = True
-                continue
-            if juntas and p == "imagenes":
-                if not all(e["imagen"] for e in datos["escenas"]):
-                    avisar("Faltan imagenes: el montaje espera.")
-                    break
-                continue
             datos["trabajo"]["paso"] = p
             proyecto.guardar(datos)
             if p == "guion":
                 if paso == "todo" and datos["escenas"]:
                     continue
                 guion.ejecutar(datos, avisar)
+                if paso == "todo" and not datos["escenas"]:
+                    avisar("Falta el guion: pégalo y vuelve a pulsar «Hacer todo».")
+                    break
             elif p == "voz":
                 voz.ejecutar(datos, avisar, solo)
             elif p == "imagenes":
@@ -170,16 +118,6 @@ def _correr(pid, paso, solo, nota):
                 if paso == "todo" and not all(e["imagen"] for e in datos["escenas"]):
                     avisar("Faltan imagenes por pegar: el montaje espera.")
                     break
-            elif p == "clips":
-                clips_gpu.ejecutar(datos, avisar, solo)
-            elif p == "movimiento":
-                # «Movimiento IA en todas las escenas»: todas pasan por la GPU.
-                if not datos.get("movimiento"):
-                    continue
-                for e in datos["escenas"]:
-                    e["video_ia"] = True
-                proyecto.guardar(datos)
-                clips_gpu.ejecutar(datos, avisar)
             elif p == "montaje":
                 montaje.ejecutar(datos, avisar)
             proyecto.guardar(datos)
@@ -209,6 +147,8 @@ class Nuevo(BaseModel):
     simular: bool = False
     voz: str = ""
     movimiento: bool = False
+    referencia: str = ""        # imagen de ejemplo del estilo (data URL), opcional
+    auto: bool = True           # lanzar «Hacer todo» al crear
 
 
 class Paso(BaseModel):
@@ -242,14 +182,8 @@ class GuionPegado(BaseModel):
     texto: str
 
 
-class Kaggle(BaseModel):
-    usuario: str
-    token: str
-
-
-class MuestraVoz(BaseModel):
-    audio: str              # data URL (lo que da FileReader o el grabador del navegador)
-    permiso: bool = False
+class ClaveGemini(BaseModel):
+    clave: str
 
 
 class Credenciales(BaseModel):
@@ -380,63 +314,8 @@ def _voz_valida(v):
 
 @app.get("/api/voces")
 def voces():
-    dentro = bool(usuarios.ACTUAL.get())
-    natural = [{"id": "chatterbox:clon", "nombre": "Tu voz clonada", "pais": "Voz natural · GPU Kaggle",
-                "genero": "", "gpu": True, "lista": dentro and voz_gpu.hay_muestra(),
-                "prueba": dentro and voz_gpu.hay_muestra() and voz_gpu.ruta_prueba("chatterbox:clon").exists()},
-               {"id": "chatterbox:base", "nombre": "Chatterbox", "pais": "Voz natural · GPU Kaggle",
-                "genero": "", "gpu": True, "lista": True,
-                "prueba": voz_gpu.ruta_prueba("chatterbox:base").exists()}]
-    return natural + voz.catalogo(VOCES)
-
-
-class ProbarVoz(BaseModel):
-    voz: str
-
-
-@app.post("/api/voz/probar")
-def probar_voz(b: ProbarVoz):
-    """Una frase de muestra con Chatterbox en la GPU de Kaggle, para oírla antes de usarla."""
     _yo()
-    if not voz_gpu.es_suya(b.voz):
-        raise HTTPException(400, "Esa voz ya se puede escuchar directamente.")
-    try:
-        voz_gpu.probar_en_segundo_plano(b.voz)
-    except RuntimeError as err:
-        raise HTTPException(400, str(err))
-    return voz_gpu.estado_prueba()
-
-
-@app.get("/api/voz/probar")
-def estado_probar_voz():
-    _yo()
-    return voz_gpu.estado_prueba()
-
-
-@app.post("/api/voz/muestra")
-def subir_muestra(m: MuestraVoz):
-    """La grabación de la persona para clonar SU voz (10-25 s)."""
-    _yo()
-    if not m.permiso:
-        raise HTTPException(400, "Confirma que es tu voz o que tienes permiso para usarla.")
-    import base64
-    import tempfile
-    try:
-        crudo = base64.b64decode(m.audio.split(",", 1)[-1], validate=False)
-    except Exception:
-        raise HTTPException(400, "No he podido leer ese audio.")
-    if len(crudo) > 15 * 1024 * 1024:
-        raise HTTPException(400, "El audio pesa demasiado: con 20 segundos basta.")
-    with tempfile.TemporaryDirectory() as tmp:
-        origen = Path(tmp) / "entrada"
-        origen.write_bytes(crudo)
-        try:
-            segundos = voz_gpu.guardar_muestra(origen)
-        except ValueError as err:
-            raise HTTPException(400, str(err))
-        except Exception:
-            raise HTTPException(400, "No he podido leer ese audio. Prueba con un mp3, wav o m4a.")
-    return {"ok": True, "segundos": segundos}
+    return voz.catalogo()
 
 
 @app.get("/api/voces/{voz_id}/muestra")
@@ -446,6 +325,8 @@ def muestra_voz(voz_id: str):
         return FileResponse(voz.muestra(voz_id), media_type="audio/mpeg")
     except ValueError as err:
         raise HTTPException(404, str(err))
+    except gemini.ErrorGemini as err:
+        raise HTTPException(502, str(err))
     except Exception:
         raise HTTPException(502, "No se pudo generar la muestra; revisa tu conexión.")
 
@@ -454,11 +335,15 @@ def muestra_voz(voz_id: str):
 def ver_config():
     cfg = proyecto.config()
     yo = usuarios.ACTUAL.get()
-    return {"voz": cfg["voz"]["voz"], "voces": VOCES,
+    return {"voz": cfg["voz"]["voz"],
             "motor_imagen": cfg["imagen"]["motor"], "motor_guion": cfg["guion"]["motor"],
+            # lo que de verdad se usa (Gemini sin clave: guion a mano e imagenes de Pollinations)
+            "guion_efectivo": guion.motor_efectivo() if yo else cfg["guion"]["motor"],
+            "imagen_efectivo": imagenes.motor_efectivo() if yo else cfg["imagen"]["motor"],
             "token_pollinations": bool(yo and proyecto.secretos().get("pollinations_token")),
             "asistente_hecho": bool(yo and proyecto.secretos().get("asistente_hecho")),
-            "gpu_conectada": bool(yo and gpu.credenciales())}
+            "gemini": bool(yo and gemini.hay_clave()),
+            "openai": bool(yo and openai_img.hay_clave())}
 
 
 @app.post("/api/config")
@@ -467,9 +352,9 @@ def guardar_config(a: Ajustes):
     cfg = proyecto.config()
     if a.voz:
         cfg["voz"]["voz"] = _voz_valida(a.voz)
-    if a.motor_imagen in ("pollinations", "manual", "kaggle"):
+    if a.motor_imagen in ("gemini", "openai", "pollinations", "manual"):
         cfg["imagen"]["motor"] = a.motor_imagen
-    if a.motor_guion in ("claude", "ollama", "manual"):
+    if a.motor_guion in ("gemini", "openai", "claude", "ollama", "manual"):
         cfg["guion"]["motor"] = a.motor_guion
     if a.token_pollinations is not None:
         proyecto.guardar_secreto("pollinations_token", a.token_pollinations.strip())
@@ -518,6 +403,14 @@ def nuevo(n: Nuevo):
         datos["voz"] = _voz_valida(n.voz)
     datos["movimiento"] = n.movimiento
     proyecto.guardar(datos)
+    if n.referencia:
+        try:
+            imagenes.poner_referencia(datos, n.referencia)
+        except Exception as err:
+            raise HTTPException(400, f"No he podido usar la imagen de ejemplo: {err}")
+    # Flujo automatico: si el guion lo escribe una IA, se lanza todo de una vez.
+    if n.auto and guion.motor_efectivo(datos) != "manual":
+        _arrancar(datos["id"], "todo")
     return datos
 
 
@@ -529,7 +422,6 @@ def ver(pid: str):
         datos["trabajo"] = None            # quedo a medias al cerrar el programa
     datos["estimacion"] = imagenes.estimar(datos)
     datos["prompts"] = {e["n"]: imagenes.prompt_de(datos, e) for e in datos["escenas"]}
-    datos["video_ia"] = clips_gpu.estimar(datos)
     datos["sello"] = time.time()
     return datos
 
@@ -603,6 +495,33 @@ def pegar_imagen(pid: str, n: int, p: Pegada):
     return ver(pid)
 
 
+class Referencia(BaseModel):
+    imagen: str = ""        # data URL; vacio = quitarla
+
+
+@app.post("/api/proyectos/{pid}/referencia")
+def poner_referencia(pid: str, r: Referencia):
+    """La imagen de ejemplo del estilo. Cambiarla rehace la hoja de personajes."""
+    _mio(pid)
+    if _ocupado(pid):
+        raise HTTPException(409, "Hay un trabajo en marcha.")
+    datos = _mio(pid)
+    try:
+        imagenes.poner_referencia(datos, r.imagen)
+    except Exception as err:
+        raise HTTPException(400, f"No he podido usar esa imagen: {err}")
+    return ver(pid)
+
+
+def _arrancar(pid, paso, solo=None, nota=""):
+    datos = proyecto.leer(pid)
+    datos["trabajo"] = {"paso": paso, "inicio": time.strftime("%H:%M:%S")}
+    proyecto.guardar(datos)
+    h = threading.Thread(target=_correr, args=(pid, paso, solo, nota), daemon=True)
+    _hilos[pid] = h
+    h.start()
+
+
 @app.post("/api/proyectos/{pid}/paso")
 def lanzar(pid: str, p: Paso):
     _mio(pid)
@@ -610,17 +529,7 @@ def lanzar(pid: str, p: Paso):
         raise HTTPException(400, f"Paso desconocido: {p.paso}")
     if _ocupado(pid):
         raise HTTPException(409, "Ya hay un trabajo en marcha en este video.")
-    datos = _mio(pid)
-    usa_gpu = p.paso == "clips" or (p.paso in ("imagenes", "todo")
-                                    and proyecto.config()["imagen"]["motor"] == "kaggle")
-    if usa_gpu and not datos.get("simular") and not gpu.credenciales():
-        raise HTTPException(400, "La GPU no está conectada. Abre el Asistente (paso 5) y "
-                                 "conecta tu cuenta de Kaggle.")
-    datos["trabajo"] = {"paso": p.paso, "inicio": time.strftime("%H:%M:%S")}
-    proyecto.guardar(datos)
-    h = threading.Thread(target=_correr, args=(pid, p.paso, p.solo, p.nota), daemon=True)
-    _hilos[pid] = h
-    h.start()
+    _arrancar(pid, p.paso, p.solo, p.nota)
     return {"ok": True}
 
 
@@ -631,7 +540,8 @@ def diagnostico():
     """Lo que hay en esta maquina, para que el asistente proponga lo que funciona."""
     _yo()
     from motor import medios
-    res = {"ffmpeg": bool(medios.FFMPEG)}
+    res = {"ffmpeg": bool(medios.FFMPEG), "gemini": gemini.hay_clave(),
+           "openai": openai_img.hay_clave()}
     exe = shutil.which("claude")
     res["claude"] = False
     if exe:
@@ -654,8 +564,7 @@ def diagnostico():
         import tempfile
         import edge_tts
         with tempfile.TemporaryDirectory() as tmp:
-            v = proyecto.config()["voz"]["voz"]
-            asyncio.run(edge_tts.Communicate("Hola", VOCES[0] if voz_gpu.es_suya(v) else v).save(f"{tmp}/p.mp3"))
+            asyncio.run(edge_tts.Communicate("Hola", voz.JORGE).save(f"{tmp}/p.mp3"))
         res["voz"] = True
     except Exception:
         res["voz"] = False
@@ -681,38 +590,59 @@ def guion_pegado(pid: str, g: GuionPegado):
     return ver(pid)
 
 
-@app.post("/api/gpu/conectar")
-def gpu_conectar(k: Kaggle):
+@app.get("/api/gemini")
+def gemini_estado():
     _yo()
-    if not k.usuario.strip() or not k.token.strip():
-        raise HTTPException(400, "Pon tu usuario y tu token de Kaggle.")
-    antes = gpu.credenciales()
-    gpu.guardar(k.usuario, k.token)
-    ok, texto = gpu.verificar()
+    return {"conectada": gemini.hay_clave()}
+
+
+@app.post("/api/gemini")
+def gemini_guardar(c: ClaveGemini):
+    """Probar la clave (sin gastar cuota: solo lista modelos) y, si vale, guardarla."""
+    _yo()
+    k = c.clave.strip()
+    if not k:
+        raise HTTPException(400, "Pega tu clave de Gemini (aistudio.google.com/apikey).")
+    ok, texto = gemini.probar(k)
     if not ok:
-        # Lo que no sirve no se queda guardado: se vuelve a lo que habia.
-        if antes:
-            gpu.guardar(antes["kaggle_usuario"], antes["kaggle_token"])
-        else:
-            gpu.olvidar()
-        raise HTTPException(400, "Kaggle no acepta ese usuario o token. Genera uno nuevo en "
-                                 "kaggle.com/settings/api (Generate New Token) y pégalo entero.")
-    return {"ok": True, "texto": texto}
+        raise HTTPException(400, texto)       # lo que no sirve no se guarda
+    gemini.guardar_clave(k)
+    return {"ok": True, "texto": texto, "modelos": gemini.resumen_modelos()}
 
 
-@app.post("/api/gpu/probar")
-def gpu_probar():
+@app.delete("/api/gemini")
+def gemini_olvidar():
     _yo()
-    if not gpu.credenciales():
-        raise HTTPException(400, "Primero conecta tu cuenta de Kaggle.")
-    gpu.probar_en_segundo_plano()
-    return gpu.estado_prueba()
+    gemini.olvidar_clave()
+    return {"ok": True}
 
 
-@app.get("/api/gpu/estado")
-def gpu_estado():
+@app.get("/api/openai")
+def openai_estado():
     _yo()
-    return {**gpu.estado_prueba(), "conectada": bool(gpu.credenciales())}
+    return {"conectada": openai_img.hay_clave()}
+
+
+@app.post("/api/openai")
+def openai_guardar(c: ClaveGemini):
+    """Probar la clave de OpenAI (solo lista modelos: no gasta saldo) y, si vale, guardarla."""
+    _yo()
+    k = c.clave.strip()
+    if not k:
+        raise HTTPException(400, "Pega tu clave de OpenAI (platform.openai.com/api-keys).")
+    ok, texto = openai_img.probar(k)
+    if not ok:
+        raise HTTPException(400, texto)       # lo que no sirve no se guarda
+    openai_img.guardar_clave(k)
+    return {"ok": True, "texto": texto,
+            "modelos": {"texto": openai_img.modelo_texto(), "imagen": openai_img.modelo_imagen()}}
+
+
+@app.delete("/api/openai")
+def openai_olvidar():
+    _yo()
+    openai_img.olvidar_clave()
+    return {"ok": True}
 
 
 if __name__ == "__main__":

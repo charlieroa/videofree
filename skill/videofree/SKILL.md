@@ -1,6 +1,6 @@
 ---
 name: videofree
-description: Instala y arranca VideoFree (texto a vídeo narrado, gratis, con la GPU de Kaggle de la persona) desde github.com/charlieroa/videofree y guía a la persona hasta su primer vídeo. Úsalo cuando pidan instalar VideoFree, "el programa de videos gratis" o /videofree.
+description: Instala y arranca VideoFree (de un tema a un vídeo narrado, gratis, con una sola clave de Gemini de la persona) desde github.com/charlieroa/videofree y guía a la persona hasta su primer vídeo. Úsalo cuando pidan instalar VideoFree, "el programa de videos gratis" o /videofree.
 ---
 
 # Instalar VideoFree
@@ -29,7 +29,7 @@ git clone https://github.com/charlieroa/videofree.git
 ```
 
 Si la carpeta `videofree` ya existe, no la borres: haz `git -C videofree pull`.
-Ahí pueden estar sus vídeos (`proyectos/`) y sus claves (`secretos/`).
+Ahí pueden estar sus vídeos (`proyectos/`) y su clave (`secretos/`).
 
 ## 3. Instalar dependencias
 
@@ -60,25 +60,29 @@ Comprueba que responde: `curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1
 
 Explícale que en la pantalla tiene que:
 1. Nada de cuenta ni contraseña: la app entra directo con un usuario local de su PC.
-2. Seguir el asistente. Para el guion, si no tiene la CLI de Claude ni Ollama, que elija
-   **ChatGPT (a mano)**.
-3. **Kaggle**, para tener GPU gratis:
-   - crear una cuenta en kaggle.com;
-   - en Settings, verificar el teléfono;
-   - en Settings → API, pulsar **Generate New Token**;
-   - pegar su usuario y su token **en la app**, y pulsar «Probar la GPU».
+2. Seguir el asistente, que tiene 4 pasos: equipo → clave de Gemini → voz → listo.
+3. **Clave de Gemini** (gratis, una sola para guion, voz e imágenes):
+   - entrar en https://aistudio.google.com/apikey con su cuenta de Google;
+   - pulsar **Create API key** y copiarla;
+   - pegarla **en la app** y pulsar «Probar y guardar».
 
-   **No le pidas el token ni lo escribas tú en ningún archivo.** Lo pega la persona en la
-   app, que lo guarda en `secretos/` (fuera de git).
-4. Hacer un primer vídeo corto, de 1 minuto, con **Modo prueba** marcado, para ver que todo
-   funciona. Después, uno de verdad.
+   **No le pidas la clave, no la escribas tú en ningún archivo y dile que no la pegue en el
+   chat.** La pega la persona en VideoFree, que la guarda en `secretos/` (fuera de git).
+   Si no quiere clave, que pulse «Seguir sin clave»: funciona con la voz Jorge, imágenes de
+   Pollinations y el guion pegado de ChatGPT.
+4. Elegir la voz escuchando las 4 (Jorge, Puck, Charon, Kore).
+5. Hacer un primer vídeo corto, de 1 minuto: tema, línea gráfica (texto y/o una imagen de
+   ejemplo) y «Hacerlo todo solo al crear» marcado. Si una escena no le gusta, en esa escena
+   puede pulsar «Subir mi imagen» para poner la suya.
+
+Avísale de algo normal: con una clave gratis, Google no da cuota para imágenes de Gemini, así
+que las imágenes salen de Pollinations (el registro lo dice). No es un fallo de la instalación.
 
 ## 6. Si algo falla
 
 - `pip` falla en Windows con Python 3.13+: crea el venv con 3.12 (`py -3.12`).
 - El puerto 8031 está ocupado: `python app.py --puerto 8032` y abre ese puerto.
-- «Kaggle ya no acepta tu token»: que genere uno nuevo en kaggle.com/settings y lo pegue en el asistente.
-- «Sin GPU»: falta verificar el teléfono en Kaggle.
-- El trabajo se queda en `queued`: es la cola de Kaggle. El programa espera y cambia de GPU solo.
+- «Gemini no acepta esa clave»: que cree otra en aistudio.google.com/apikey y la pegue en el asistente.
+- «Se acabó la cuota gratis de Gemini»: esperar un rato, o usar la voz Jorge.
 
 Termina con un resumen corto: dónde quedó instalado, cómo abrirlo otra vez y qué paso le falta.

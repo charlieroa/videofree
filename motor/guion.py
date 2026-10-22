@@ -1,8 +1,10 @@
 """
 Paso 1: el guion, partido en escenas.
 
-Lo escribe Claude por su CLI (va contra tu suscripcion: 0 $ por video) o, si
-se elige en config.json, un modelo local de Ollama (gratis, mas flojo).
+Lo escribe Gemini (por defecto, con la clave gratis de la persona; ve tambien
+la imagen de ejemplo del estilo si la hay), Claude por su CLI (va contra tu
+suscripcion), un modelo local de Ollama (gratis, mas flojo) o, a mano, ChatGPT:
+se copia el prompt y se pega la respuesta. Gemini sin clave = a mano.
 Ademas de la narracion devuelve la «biblia» del video: el estilo y como es
 cada personaje, en ingles. Esa biblia se repite en el prompt de cada imagen
 y es lo que hace que las imagenes se parezcan entre si.
@@ -19,7 +21,7 @@ import tempfile
 
 import requests
 
-from . import proyecto
+from . import gemini, imagenes, openai_img, proyecto
 
 PLANTILLA = """Eres guionista y director de un canal de YouTube de videos narrados.
 Convierte el MATERIAL en un video de unos {minutos} minutos, narrado en espanol.
@@ -218,19 +220,52 @@ def _por_capitulos(datos, cfg, llamar, nombre, avisar):
             "personajes": indice.get("personajes", []), "escenas": escenas}
 
 
+def motor_efectivo(datos=None):
+    """El motor que de verdad se usa: Gemini sin clave pasa a OpenAI si hay su clave,
+    y si no, a «a mano». OpenAI sin clave, a mano."""
+    if datos and datos.get("simular"):
+        return "prueba"
+    motor = proyecto.config()["guion"]["motor"]
+    if motor == "gemini" and not gemini.hay_clave():
+        return "openai" if openai_img.hay_clave() else "manual"
+    if motor == "openai" and not openai_img.hay_clave():
+        return "manual"
+    return motor
+
+
+NOTA_REFERENCIA = ("Se adjunta una IMAGEN DE EJEMPLO del estilo visual que quiere el usuario: "
+                   "\"estilo_visual\" debe describir con precision su estilo (tecnica, paleta, luz, "
+                   "trazo), no su contenido.\n\n")
+
+
 def ejecutar(datos, avisar):
     cfg = proyecto.config()["guion"]
+    motor = motor_efectivo(datos)
     segundos = cfg["segundos_por_escena"]
     escenas = max(3, round(datos["minutos"] * 60 / segundos))
     palabras = round(segundos * cfg["palabras_por_minuto"] / 60)
 
-    if datos.get("simular"):
+    if motor == "prueba":
         g = _troceado(datos, palabras)
-    elif cfg["motor"] == "manual":
-        avisar("Guion a mano: copia el prompt, pegalo en ChatGPT y pega aqui su respuesta.")
+    elif motor == "manual":
+        avisar("Guion a mano: copia el prompt, pegalo en ChatGPT y pega aqui su respuesta."
+               + (" (Con tu clave de Gemini u OpenAI se escribe solo.)"
+                  if cfg["motor"] in ("gemini", "openai") else ""))
         return
     else:
-        if cfg["motor"] == "ollama":
+        if motor == "gemini":
+            nombre = f"Gemini ({gemini.modelo_texto()})"
+            ref = imagenes.referencia(datos)
+            extra = NOTA_REFERENCIA if ref else ""
+            llamar = lambda p: _extraer_json(gemini.texto(extra + p, avisar,
+                                                          imagenes=[ref] if ref else []))
+        elif motor == "openai":
+            nombre = f"OpenAI ({openai_img.modelo_texto()})"
+            ref = imagenes.referencia(datos)
+            extra = NOTA_REFERENCIA if ref else ""
+            llamar = lambda p: _extraer_json(openai_img.texto(extra + p, avisar,
+                                                              imagenes=[ref] if ref else []))
+        elif motor == "ollama":
             nombre = f"Ollama ({cfg['modelo_ollama']})"
             llamar = lambda p: _extraer_json(_ollama(p, cfg["modelo_ollama"]))
         else:

@@ -96,8 +96,6 @@
                    font-size: 13px; text-align: center; padding: 0; }
   .escena .media span { padding: 10px; }
   .escena img, .escena video { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .escena .clipia { position: absolute; right: 6px; top: 6px; background: var(--acento); color: #fff;
-                    font-size: 11px; padding: 2px 6px; border-radius: 4px; }
   .escena .reusa { position: absolute; left: 6px; top: 6px; background: #000a; color: #fff;
                    font-size: 11px; padding: 2px 6px; border-radius: 4px; }
   .escena .cab { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 13px; }
@@ -174,12 +172,13 @@
   .banner-caja .zona.segura span { left: auto; right: 6px; }
   .canal a.boton { display: inline-block; font-size: 13px; padding: 7px 12px; border: 1px solid var(--borde); border-radius: 8px; color: var(--texto); text-decoration: none; margin-left: 6px; }
   .medidas { font-size: 13px; color: var(--suave); line-height: 1.6; margin: 0; }
-  .clon { margin-top: 8px; padding: 10px; border: 1px dashed var(--borde); border-radius: 8px; font-size: 13px; }
-  .clon[hidden] { display: none; }
-  .clon p { margin: 0 0 8px; color: var(--suave); }
-  .clon .fila { gap: 6px; }
-  .clon label { margin: 8px 0 0; display: flex; gap: 6px; align-items: flex-start; }
-  .clon label input { width: auto; margin-top: 2px; }
+  .ref-nueva { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .ref-nueva img { width: 96px; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; border: 1px solid var(--borde); }
+  .ref-nueva img[hidden] { display: none; }
+  .ref-proyecto { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+  .ref-proyecto img { width: 160px; aspect-ratio: 16/9; object-fit: cover; border-radius: 8px; border: 1px solid var(--borde); }
+  .escena .tuya { position: absolute; right: 6px; top: 6px; background: var(--ok); color: #04210f;
+                  font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
 </style>
 </head>
 <body class="fuera">
@@ -193,8 +192,9 @@
   </div>
   <div class="ajustes" id="ajustes" hidden>
     <h2>Ajustes</h2>
-    <div class="grupo">Guion <select id="motorGuion"><option value="manual">ChatGPT a mano</option><option value="claude">Claude (tu suscripción)</option><option value="ollama">Ollama (local)</option></select></div>
-    <div class="grupo">Imágenes <select id="motorImagen"><option value="pollinations">Pollinations (automático)</option><option value="manual">Las pego yo (ChatGPT…)</option><option value="kaggle">GPU Kaggle (gratis, sin límite, mejor calidad)</option></select></div>
+    <div class="grupo">Claves de IA <span class="fila"><span id="estadoGemini" class="estado"></span><button id="cambiarGemini">Cambiar</button></span></div>
+    <div class="grupo">Guion <select id="motorGuion"><option value="gemini">Gemini (automático)</option><option value="openai">OpenAI (automático)</option><option value="manual">ChatGPT a mano</option><option value="claude">Claude (tu suscripción)</option><option value="ollama">Ollama (local)</option></select></div>
+    <div class="grupo">Imágenes <select id="motorImagen"><option value="gemini">Gemini (con tu estilo y personajes iguales)</option><option value="openai">OpenAI gpt-image (de pago, la mejor calidad)</option><option value="pollinations">Pollinations (gratis, sin clave)</option><option value="manual">Las pego yo (ChatGPT…)</option></select></div>
     <div class="grupo">Voz <select id="voz"></select></div>
     <div class="grupo">Clave Pollinations <span class="fila"><input id="token" type="password" placeholder="opcional, quita la marca de agua"><button id="guardarToken">Guardar</button></span></div>
   </div>
@@ -204,16 +204,20 @@
   <aside>
     <div class="panel panel-voz" style="margin-bottom:16px">
       <h2>🎙 Voz</h2>
-      <p class="estado" style="margin:0 0 8px">Elige y escucha la voz de tus vídeos nuevos. Las de arriba suenan más naturales (van en tu GPU de Kaggle).</p>
+      <p class="estado" style="margin:0 0 8px">Elige y escucha la voz de tus vídeos nuevos. Jorge es gratis y sin clave; Puck, Charon y Kore son de Gemini (con tu clave).</p>
       <div id="nVozCaja"></div>
     </div>
     <div class="panel">
       <h2>Nuevo vídeo</h2>
       <label>Título</label><input id="nTitulo" placeholder="Ej.: La caída de Roma">
-      <label>Material (lo que quieres contar)</label>
+      <label>Tema (lo que quieres contar)</label>
       <textarea id="nTexto" rows="8" placeholder="Pega aquí el texto, un resumen o las ideas del vídeo"></textarea>
       <label>Minutos</label><input id="nMinutos" type="number" min="0.5" step="0.5" value="1">
-      <label>Estilo visual (opcional)</label><input id="nEstilo" placeholder="Ej.: ilustración acuarela, colores cálidos">
+      <label>Línea gráfica (opcional)</label><input id="nEstilo" placeholder="Ej.: ilustración acuarela, colores cálidos">
+      <label>Imagen de ejemplo del estilo (opcional)</label>
+      <div class="ref-nueva"><img id="nRefVista" alt="" hidden><button type="button" id="nRefSubir">Subir imagen</button>
+        <button type="button" id="nRefQuitar" hidden>Quitar</button><input type="file" id="nRef" accept="image/*" hidden></div>
+      <p class="estado" style="margin:4px 0 0">Con Gemini, todas las imágenes copian su estilo (no su contenido).</p>
       <label>Tono de la narración</label>
       <select id="nTono">
         <option value="">Divulgativo y ameno</option>
@@ -223,7 +227,7 @@
         <option value="inspirador">Inspirador / devocional (tipo «BibleFix»)</option>
         <option value="misterio">Misterio e intriga</option>
       </select>
-      <label class="fila"><input id="nMovimiento" type="checkbox" style="width:auto" checked> Movimiento IA en todas las escenas (GPU Kaggle: gente que respira y habla, humo, luz…)</label>
+      <label class="fila"><input id="nAuto" type="checkbox" style="width:auto" checked> Hacerlo todo solo al crear (guion, voz, imágenes y montaje)</label>
       <label class="fila"><input id="nSimular" type="checkbox" style="width:auto"> Modo prueba (sin IA: trocea tu texto, voz muda e imágenes de prueba)</label>
       <div style="margin-top:12px"><button class="primario" id="crear">Crear</button></div>
     </div>
@@ -237,12 +241,12 @@
       <h2>De un texto a un vídeo narrado</h2>
       <p>Escribe de qué va tu vídeo. Video Simple escribe el guion, pone la voz, crea las imágenes, las anima y añade subtítulos. Gratis.</p>
       <button class="primario" id="empezar">Crear mi vídeo</button>
-      <div class="etiquetas"><span>Sin tarjeta</span><span>Voz en español</span><span>Hasta 14 min o más</span><span>Vídeo IA con GPU gratis</span></div>
+      <div class="etiquetas"><span>Sin tarjeta</span><span>Voz en español</span><span>Hasta 14 min o más</span><span>Una sola clave gratis: Gemini</span></div>
     </div>
     <div class="muestra" id="ejemplo">
       <video controls preload="metadata" src="/ejemplo/ejemplo.mp4" poster="/ejemplo/portada.jpg"
              onerror="document.getElementById('ejemplo').hidden = true"></video>
-      <div class="pie">Ejemplo real de 5 minutos hecho con Video Simple, gratis: «5 hábitos de la mañana que fortalecen tu fe cada día». Imágenes generadas en una GPU gratis de Kaggle.</div>
+      <div class="pie">Ejemplo real de 5 minutos hecho con Video Simple, gratis: «5 hábitos de la mañana que fortalecen tu fe cada día».</div>
     </div>
     <div class="otros" id="otroEjemplo">
       <h3>Otro estilo: dibujos animados de historia, con humor</h3>
@@ -251,10 +255,10 @@
       <div class="pie">«¿Qué hacía realmente un romano en un día normal?» · 6 minutos</div>
     </div>
     <div class="como">
-      <div><span class="num">1</span><b>Escribe el tema</b><small>Pega un texto, un resumen o tus ideas, y elige los minutos.</small></div>
+      <div><span class="num">1</span><b>Tema y línea gráfica</b><small>Pega un texto o tus ideas, elige los minutos y, si quieres, sube una imagen de ejemplo del estilo.</small></div>
       <div><span class="num">2</span><b>Guion y voz</b><small>Se escribe por capítulos y se narra con voz natural en español.</small></div>
-      <div><span class="num">3</span><b>Imágenes coherentes</b><small>Mismo estilo y personajes en todo el vídeo. Puedes rehacer o pegar las tuyas.</small></div>
-      <div><span class="num">4</span><b>Vídeo listo</b><small>Animación, subtítulos y MP4 en 1080p. Con GPU gratis, planos con vídeo IA real.</small></div>
+      <div><span class="num">3</span><b>Imágenes coherentes</b><small>Mismo estilo y personajes en todo el vídeo. En cualquier escena puedes poner tu propia imagen.</small></div>
+      <div><span class="num">4</span><b>Vídeo listo</b><small>Animación, subtítulos y MP4 en 1080p, montado en tu PC.</small></div>
     </div>
   </section>
 </main>
@@ -281,16 +285,14 @@ const guardarCfg = cambio => api("/api/config", { method: "POST", body: JSON.str
 // Las voces en español van agrupadas por país, y todas se pueden escuchar antes.
 const nombreVoz = id => { const v = voces.find(x => x.id === id); return v ? `${v.nombre} · ${v.pais}${v.genero ? " · " + v.genero : ""}` : id; };
 function opcionesVoz(elegida) {
-  const paises = [...new Set(voces.map(v => v.pais))];
-  return paises.map(p => `<optgroup label="${esc(p)}">${voces.filter(v => v.pais === p).map(v =>
-    `<option value="${v.id}" ${v.id === elegida ? "selected" : ""}>${esc(v.nombre)}${v.gpu ? (v.lista ? " (GPU Kaggle)" : " (sube tu grabación)") : " · " + esc(v.pais) + (v.genero ? " (" + v.genero + ")" : "")}</option>`).join("")}</optgroup>`).join("");
+  return voces.map(v => `<option value="${v.id}" ${v.id === elegida ? "selected" : ""}>${esc(v.nombre)} · ${esc(v.gemini ? "Gemini, " + v.genero + " " + v.detalle : v.pais + ", gratis")}${v.gemini && !v.lista ? " (necesita clave)" : ""}</option>`).join("")
+    + (elegida && !voces.some(v => v.id === elegida) ? `<option value="${esc(elegida)}" selected>${esc(elegida)}</option>` : "");
 }
 let sonando = null;
 // Pulsar ▶ la reproduce; pulsar otra vez el mismo botón la para.
 function oir(id, boton) {
   const ficha = voces.find(v => v.id === id) || {};
-  if (id === "chatterbox:clon" && !ficha.lista) return alert("Primero sube o graba 10-20 segundos de tu voz.");
-  if (id === "chatterbox:base" && !ficha.prueba) return alert("Chatterbox habla en tu GPU de Kaggle: pulsa «🧪 Probar en mi GPU» y en unos minutos la escuchas aquí.");
+  if (ficha.gemini && !ficha.lista) return alert("Esta voz es de Gemini: pega tu clave en el Asistente para escucharla.");
   if (sonando) {
     const mismo = sonando.boton === boton;
     sonando.parar();
@@ -303,92 +305,33 @@ function oir(id, boton) {
   boton.textContent = "⏳";
   a.onplaying = () => { boton.textContent = "■ Parar"; };
   a.onended = a.parar;
-  a.onerror = () => { a.parar(); alert("No se pudo escuchar esa voz. Revisa tu conexión."); };
+  a.onerror = () => { a.parar(); alert("No se pudo escuchar esa voz. Revisa tu conexión (y tu cuota de Gemini)."); };
   a.play().catch(() => a.parar());
 }
 // Un desplegable de voz con su botón de escuchar. alCambiar recibe la voz nueva.
 function selectorVoz(caja, elegida, alCambiar) {
-  caja.innerHTML = `<div class="voz-elige"><select>${opcionesVoz(elegida)}</select><button type="button">▶ Escuchar</button></div>
-    <div class="fila probar-gpu" style="margin-top:6px"><button type="button">🧪 Probar en mi GPU</button><span class="estado"></span></div>`;
+  caja.innerHTML = `<div class="voz-elige"><select>${opcionesVoz(elegida)}</select><button type="button">▶ Escuchar</button></div>`;
   const sel = caja.querySelector("select"), b = caja.querySelector(".voz-elige button");
-  const fila = caja.querySelector(".probar-gpu"), bp = fila.querySelector("button"), info = fila.querySelector(".estado");
-  const verFila = () => { fila.hidden = !sel.value.startsWith("chatterbox:"); fila.style.display = fila.hidden ? "none" : ""; };
   b.onclick = () => oir(sel.value, b);
-  bp.onclick = async () => {
-    try { pintarPrueba(await api("/api/voz/probar", { method: "POST", body: JSON.stringify({ voz: sel.value }) })); }
-    catch (e) { info.textContent = "✗ " + e.message; }
-  };
-  sel.onchange = () => { if (sonando) sonando.parar(); verFila(); if (alCambiar) alCambiar(sel.value); };
-  verFila();
-  if (pruebaVoz.fase !== "nada") pintarPrueba(pruebaVoz);
+  sel.onchange = () => { if (sonando) sonando.parar(); if (alCambiar) alCambiar(sel.value); };
   return sel;
 }
-// La prueba en Kaggle tarda minutos: se mira cada 5 s y se enseña en todos los selectores.
-let pruebaVoz = { fase: "nada", detalle: "" }, relojPrueba = null;
-function pintarPrueba(e) {
-  pruebaVoz = e;
-  document.querySelectorAll(".probar-gpu").forEach(f => {
-    f.querySelector(".estado").textContent = e.detalle || "";
-    f.querySelector("button").disabled = e.fase === "probando";
-  });
-  clearTimeout(relojPrueba);
-  if (e.fase === "probando") relojPrueba = setTimeout(async () => pintarPrueba(await api("/api/voz/probar")), 5000);
-  else if (e.fase === "ok") api("/api/voces").then(v => voces = v);
-}
-
-// Clonar la voz: la persona sube o graba 10-20 s de SU voz.
-const CLON = `<div class="clon" id="clon" hidden>
-  <p>Sube o graba <b>10-20 segundos</b> hablando tranquilo, sin música ni ruido. Chatterbox la imita en tu GPU de Kaggle.</p>
-  <div class="fila"><button type="button" id="clonGrabar">🎙 Grabar 15 s</button>
-    <button type="button" id="clonSubir">Subir audio</button><input type="file" id="clonArchivo" accept="audio/*" hidden></div>
-  <label><input type="checkbox" id="clonPermiso"> Es mi voz, o tengo permiso de su dueño para usarla.</label>
-  <div class="estado" id="clonEstado"></div></div>`;
-function enlazarClon() {
-  const estado = t => $("#clonEstado").textContent = t;
-  const enviar = async blob => {
-    if (!$("#clonPermiso").checked) return estado("Marca la casilla de permiso y vuelve a intentarlo.");
-    estado("Guardando…");
-    const url = await new Promise(ok => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(blob); });
-    try {
-      const r = await api("/api/voz/muestra", { method: "POST", body: JSON.stringify({ audio: url, permiso: true }) });
-      voces = await api("/api/voces");
-      estado(`✓ Voz guardada (${r.segundos} s). Ahora pulsa «🧪 Probar en mi GPU» para oírla con Chatterbox.`);
-    } catch (e) { estado("✗ " + e.message); }
-  };
-  $("#clonSubir").onclick = () => $("#clonArchivo").click();
-  $("#clonArchivo").onchange = ev => { const f = ev.target.files[0]; if (f) enviar(f); ev.target.value = ""; };
-  $("#clonGrabar").onclick = async () => {
-    if (!$("#clonPermiso").checked) return estado("Marca primero la casilla de permiso.");
-    let flujo;
-    try { flujo = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-    catch { return estado("✗ El navegador no deja usar el micrófono."); }
-    const rec = new MediaRecorder(flujo), partes = [];
-    rec.ondataavailable = ev => partes.push(ev.data);
-    rec.onstop = () => { flujo.getTracks().forEach(t => t.stop()); $("#clonGrabar").disabled = false; enviar(new Blob(partes, { type: rec.mimeType })); };
-    rec.start(); $("#clonGrabar").disabled = true;
-    let quedan = 15;
-    estado(`🔴 Grabando… habla con naturalidad (${quedan} s)`);
-    const reloj = setInterval(() => {
-      quedan--;
-      if (quedan > 0) return estado(`🔴 Grabando… habla con naturalidad (${quedan} s)`);
-      clearInterval(reloj); rec.stop();
-    }, 1000);
-  };
-}
+const leerArchivo = f => new Promise(ok => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(f); });
 
 async function cargarConfig() {
-  [config, voces, pruebaVoz] = await Promise.all([api("/api/config"), api("/api/voces"), api("/api/voz/probar")]);
+  [config, voces] = await Promise.all([api("/api/config"), api("/api/voces")]);
   pintarCfg();
 }
 function pintarCfg() {
   $("#voz").innerHTML = opcionesVoz(config.voz);
   if (!$("#nVozCaja").dataset.hecho) {
     $("#nVozCaja").dataset.hecho = "1";
-    const sel = selectorVoz($("#nVozCaja"), config.voz, v => { $("#clon").hidden = v !== "chatterbox:clon"; });
-    $("#nVozCaja").insertAdjacentHTML("beforeend", CLON);
-    $("#clon").hidden = sel.value !== "chatterbox:clon";
-    enlazarClon();
+    selectorVoz($("#nVozCaja"), config.voz);
+  } else {
+    const sel = $("#nVozCaja select"), elegida = sel.value;
+    sel.innerHTML = opcionesVoz(elegida);              // al guardar la clave cambia «(necesita clave)»
   }
+  $("#estadoGemini").textContent = [config.gemini && "Gemini ✓", config.openai && "OpenAI ✓"].filter(Boolean).join(" · ") || "sin clave";
   $("#motorGuion").value = config.motor_guion;
   $("#motorImagen").value = config.motor_imagen;
   $("#token").placeholder = config.token_pollinations ? "token guardado ✓" : "opcional, quita la marca de agua";
@@ -396,6 +339,7 @@ function pintarCfg() {
 $("#voz").onchange = () => guardarCfg({ voz: $("#voz").value });
 $("#motorGuion").onchange = () => guardarCfg({ motor_guion: $("#motorGuion").value });
 $("#motorImagen").onchange = () => guardarCfg({ motor_imagen: $("#motorImagen").value });
+$("#cambiarGemini").onclick = () => { $("#ajustes").hidden = true; abrirAsistente(PASOS_ASIS.indexOf("gemini")); };
 $("#guardarToken").onclick = () => { guardarCfg({ token_pollinations: $("#token").value }); $("#token").value = ""; };
 
 async function cargarLista() {
@@ -410,10 +354,21 @@ $("#crear").onclick = async () => {
     const p = await api("/api/proyectos", { method: "POST", body: JSON.stringify({
       titulo: $("#nTitulo").value, texto: $("#nTexto").value, minutos: +$("#nMinutos").value || 1,
       estilo: $("#nEstilo").value, tono: $("#nTono").value, simular: $("#nSimular").checked,
-      voz: $("#nVozCaja select")?.value || "", movimiento: $("#nMovimiento").checked }) });
+      voz: $("#nVozCaja select")?.value || "", referencia: refNueva, auto: $("#nAuto").checked }) });
+    refNueva = ""; $("#nRefVista").hidden = true; $("#nRefQuitar").hidden = true;
     location.hash = p.id;
   } catch (e) { alert(e.message); }
 };
+// La imagen de ejemplo del estilo del vídeo nuevo (se manda al crear).
+let refNueva = "";
+$("#nRefSubir").onclick = () => $("#nRef").click();
+$("#nRef").onchange = async ev => {
+  const f = ev.target.files[0]; ev.target.value = "";
+  if (!f) return;
+  refNueva = await leerArchivo(f);
+  $("#nRefVista").src = refNueva; $("#nRefVista").hidden = false; $("#nRefQuitar").hidden = false;
+};
+$("#nRefQuitar").onclick = () => { refNueva = ""; $("#nRefVista").hidden = true; $("#nRefQuitar").hidden = true; };
 
 window.onhashchange = () => abrir(location.hash.slice(1));
 async function abrir(pid) {
@@ -505,7 +460,7 @@ function tarjetaVideo(p) {
       ${p.segundos ? `<span class="dur">${mmss(p.segundos)}</span>` : ""}</a>
     <div class="cuerpo">
       <b>${esc(p.titulo)}</b>
-      <small>${esc(p.creado.slice(0, 10))} · ${p.escenas} escenas${p.clips ? ` · ${p.clips} clips IA` : ""}${p.simular ? " · prueba" : ""}</small>
+      <small>${esc(p.creado.slice(0, 10))} · ${p.escenas} escenas${p.simular ? " · prueba" : ""}</small>
       <small>🎙 ${esc(nombreVoz(p.voz || config.voz))}</small>
       ${pub ? `<small>✓ Publicado ${esc(pub.fecha)}${pub.url ? ` · <a href="${esc(pub.url)}" target="_blank" rel="noopener">ver en YouTube</a>` : ""}</small>` : ""}
       <div class="acciones">
@@ -525,46 +480,48 @@ async function refrescar() {
   const foco = document.activeElement;
   const editando = foco && foco.dataset && foco.dataset.campo;
   const viendo = document.querySelector(".escena video:hover");
-  const eligiendoVoz = (foco && foco.closest && foco.closest("#pVoz")) || (sonando && sonando.boton.closest("#pVoz"));
+  const eligiendoVoz = (foco && foco.closest && foco.closest("#pVoz")) || (sonando && sonando.boton.closest && sonando.boton.closest("#pVoz"));
   if (!editando && !viendo && !eligiendoVoz) pintar();
   temporizador = setTimeout(refrescar, datos.ocupado ? 2000 : 8000);
 }
 
 function pintar() {
-  const d = datos, est = d.estimacion, ocupado = d.ocupado, vi = d.video_ia || {};
+  const d = datos, est = d.estimacion, ocupado = d.ocupado;
+  const guionAMano = config.guion_efectivo === "manual" && !d.simular;
   const hay = d.escenas.length > 0;
   const conVoz = hay && d.escenas.every(e => e.audio);
   const conImg = hay && d.escenas.every(e => e.imagen);
   const dur = d.escenas.reduce((s, e) => s + (e.duracion || 0), 0);
   const faltanImg = d.escenas.filter(e => !e.imagen).length;
-  const plan = est.motor === "pollinations" ? `${est.imagenes} imágenes por generar (~${est.minutos_imagenes} min)`
-    : est.motor === "kaggle" ? `${est.imagenes} imágenes por generar en tu GPU de Kaggle (~${est.minutos_imagenes} min)${!config.gpu_conectada ? " · GPU sin conectar" : ""}`
+  const plan = est.motor === "pollinations" ? `${est.imagenes} imágenes por generar con Pollinations (~${est.minutos_imagenes} min)`
+    : est.motor === "gemini" || est.motor === "openai" ? `${est.imagenes} imágenes por generar con ${est.motor === "openai" ? "OpenAI" : "Gemini"} (~${est.minutos_imagenes} min)`
     : est.motor === "manual" ? `${faltanImg} escenas esperan tu imagen` : "imágenes de prueba";
 
   $("#vista").innerHTML = `
     <div class="fila" style="justify-content:space-between">
       <h2 style="margin:0">${esc(d.biblia?.titulo || d.titulo)}</h2>
-      <span class="fila" style="gap:14px"><label class="fila" style="margin:0" title="Anima todas las escenas en tu GPU de Kaggle, con la cámara quieta"><input type="checkbox" id="movimiento" ${d.movimiento ? "checked" : ""} ${ocupado ? "disabled" : ""} style="width:auto"> Movimiento IA en todo</label>
-      <label class="fila" style="margin:0"><input type="checkbox" id="simular" ${d.simular ? "checked" : ""} ${ocupado ? "disabled" : ""} style="width:auto"> Modo prueba</label></span>
+      <span class="fila" style="gap:14px"><label class="fila" style="margin:0"><input type="checkbox" id="simular" ${d.simular ? "checked" : ""} ${ocupado ? "disabled" : ""} style="width:auto"> Modo prueba</label></span>
     </div>
     <p class="estado">${d.escenas.length} escenas · ${(dur / 60).toFixed(1)} min de voz · ${plan} · coste 0 $</p>
     <div class="fila" style="max-width:520px"><span class="estado">Voz del vídeo</span><div id="pVoz" style="flex:1"></div></div>
-    ${(d.voz || config.voz) === "chatterbox:clon" && !voces.find(v => v.id === "chatterbox:clon")?.lista ? `<p class="ayuda">Para usar tu voz clonada, sube o graba tu voz en el panel de la izquierda (Voz → Tu voz clonada).</p>` : ""}
-    ${(d.voz || config.voz || "").startsWith("chatterbox:") && !config.gpu_conectada ? `<p class="ayuda">Esta voz va en tu GPU de Kaggle: conéctala en el Asistente.</p>` : ""}
-    ${vi.marcadas ? `<p class="estado">🎬 ${vi.marcadas} escenas con vídeo IA · ${vi.con_clip} con clip
-      ${vi.faltan ? ` · faltan ${vi.faltan}: ~${vi.horas} h de GPU de tus ${vi.horas_semana} h semanales de Kaggle${vi.medido ? " (medido)" : " (estimado)"}` : ""}
-      ${vi.sin_imagen ? ` · ${vi.sin_imagen} aún sin imagen` : ""}</p>` : ""}
+    ${voces.find(v => v.id === (d.voz || config.voz))?.gemini && !config.gemini ? `<p class="ayuda">Esta voz es de Gemini: pega tu clave en el Asistente o cambia a Jorge (gratis).</p>` : ""}
+    <div class="ref-proyecto"><span class="estado">Imagen de ejemplo del estilo</span>
+      ${d.referencia ? `<a href="${archivo(d.referencia)}" target="_blank"><img src="${archivo(d.referencia)}" alt="Imagen de ejemplo"></a>` : `<span class="estado">— ninguna</span>`}
+      <button id="refSubir" ${ocupado ? "disabled" : ""}>${d.referencia ? "Cambiar" : "Subir"}</button>
+      ${d.referencia ? `<button id="refQuitar" ${ocupado ? "disabled" : ""}>Quitar</button>` : ""}
+      <input type="file" id="refArchivo" accept="image/*" hidden></div>
     <div class="pasos">
-      <button data-paso="guion" ${ocupado || (config.motor_guion === "manual" && !d.simular) ? "disabled" : ""}>1 · Guion</button>
+      <button data-paso="guion" ${ocupado || guionAMano ? "disabled" : ""}>1 · Guion</button>
       <button data-paso="voz" ${ocupado || !hay ? "disabled" : ""}>2 · Voz</button>
       <button data-paso="imagenes" ${ocupado || !hay ? "disabled" : ""}>3 · Imágenes</button>
-      <button id="pasoClips" ${ocupado || !hay ? "disabled" : ""} title="Anima con IA las escenas marcadas «Vídeo IA (GPU)» en la GPU gratis de Kaggle">3b · Clips IA (GPU Kaggle)${!config.gpu_conectada && !d.simular ? " · sin conectar" : ""}</button>
       <button data-paso="montaje" ${ocupado || !conImg || !conVoz ? "disabled" : ""}>4 · Animar y montar MP4</button>
       <button class="primario" data-paso="todo" ${ocupado ? "disabled" : ""}>Hacer todo</button>
     </div>
     ${est.motor === "manual" && hay ? `<p class="ayuda">Imágenes a mano: en cada escena pulsa <b>Copiar prompt</b>, pégalo en ChatGPT (o Gemini, Bing…),
-      copia la imagen que te dé y pégala aquí con <b>Ctrl+V</b> con el ratón encima de la escena, o usa <b>Subir imagen</b>.</p>` : ""}
-    ${!hay && config.motor_guion === "manual" && !d.simular ? `<div class="ayuda"><b>Guion con ChatGPT (gratis):</b>
+      copia la imagen que te dé y pégala aquí con <b>Ctrl+V</b> con el ratón encima de la escena, o usa <b>Subir mi imagen</b>.</p>`
+      : hay ? `<p class="ayuda">¿Una escena no te gusta? Pon la tuya: <b>Subir mi imagen</b>, o <b>Ctrl+V</b> con el ratón encima.
+      Las tuyas llevan la etiqueta <b>Tu imagen</b> y ni «Imágenes» ni «Hacer todo» las pisan.</p>` : ""}
+    ${!hay && guionAMano ? `<div class="ayuda"><b>Guion con ChatGPT (gratis)</b>${config.motor_guion === "gemini" || config.motor_guion === "openai" ? " · con tu clave de Gemini u OpenAI se escribe solo (Asistente)" : ""}:
       1) <button id="copiarGuion">Copiar prompt del guion</button> 2) pégalo en <a href="https://chatgpt.com" target="_blank">ChatGPT</a>
       3) copia toda su respuesta y pégala aquí:
       <textarea id="guionPegado" rows="5" placeholder="Pega aquí la respuesta de ChatGPT (el JSON)" style="margin-top:6px"></textarea>
@@ -575,7 +532,7 @@ function pintar() {
     ${d.biblia ? `<details><summary>Estilo y personajes (se repiten en cada imagen)</summary>
       <p class="estado">${esc(d.biblia.estilo_visual)}</p>
       <ul>${(d.biblia.personajes || []).map(p => `<li><b>${esc(p.nombre)}</b>: ${esc(p.descripcion_visual)}</li>`).join("")}</ul>
-      ${d.hoja ? `<p class="estado">Hoja de personajes (la GPU la usa como referencia en cada escena):</p>
+      ${d.hoja ? `<p class="estado">Hoja de personajes (Gemini la usa como referencia en cada escena):</p>
       <a href="${archivo(d.hoja)}" target="_blank"><img src="${archivo(d.hoja)}" alt="Hoja de personajes" style="max-width:100%;border-radius:8px"></a>` : ""}</details>` : ""}
     <div class="escenas">${d.escenas.map(e => tarjeta(e, ocupado)).join("")}</div>
     <h2 style="margin-top:18px">Registro</h2>
@@ -592,7 +549,19 @@ function pintar() {
   });
   selVoz.disabled = ocupado;
   document.querySelectorAll("[data-paso]").forEach(b => b.onclick = () => lanzar(b.dataset.paso));
-  $("#pasoClips").onclick = () => lanzarClips();
+  $("#refSubir").onclick = () => $("#refArchivo").click();
+  $("#refArchivo").onchange = async ev => {
+    const f = ev.target.files[0]; ev.target.value = "";
+    if (!f) return;
+    try { await api(`/api/proyectos/${actual}/referencia`, { method: "POST", body: JSON.stringify({ imagen: await leerArchivo(f) }) }); }
+    catch (e) { alert(e.message); }
+    refrescar();
+  };
+  if ($("#refQuitar")) $("#refQuitar").onclick = async () => {
+    try { await api(`/api/proyectos/${actual}/referencia`, { method: "POST", body: JSON.stringify({ imagen: "" }) }); }
+    catch (e) { alert(e.message); }
+    refrescar();
+  };
   if ($("#copiarGuion")) {
     $("#copiarGuion").onclick = async ev => {
       const { prompt } = await api(`/api/proyectos/${actual}/guion_prompt`);
@@ -605,11 +574,6 @@ function pintar() {
       refrescar();
     };
   }
-  $("#movimiento").onchange = async ev => {
-    if (!ev.target.checked && d.escenas.some(e => e.clip) && !confirm("¿Quitar el movimiento? Se olvidan los clips IA de este vídeo.")) { ev.target.checked = true; return; }
-    await api(`/api/proyectos/${actual}/ajustes`, { method: "POST", body: JSON.stringify({ movimiento: ev.target.checked }) });
-    refrescar();
-  };
   $("#simular").onchange = async ev => {
     await api(`/api/proyectos/${actual}/ajustes`, { method: "POST", body: JSON.stringify({ simular: ev.target.checked }) });
     refrescar();
@@ -620,9 +584,11 @@ function pintar() {
     catch (e) { alert(e.message); }
     t.blur(); refrescar();
   });
-  document.querySelectorAll("[data-rehacer]").forEach(b => b.onclick = () =>
-    b.dataset.rehacer === "clips" ? lanzarClips([+b.dataset.n])
-      : lanzar(b.dataset.rehacer, [+b.dataset.n], document.querySelector(`#nota${b.dataset.n}`).value));
+  document.querySelectorAll("[data-rehacer]").forEach(b => b.onclick = () => {
+    const e = d.escenas.find(x => x.n === +b.dataset.n);
+    if (b.dataset.rehacer === "imagenes" && e?.propia && !confirm("Esta escena tiene tu imagen. ¿Cambiarla por una generada?")) return;
+    lanzar(b.dataset.rehacer, [+b.dataset.n], document.querySelector(`#nota${b.dataset.n}`).value);
+  });
   document.querySelectorAll(".escena video").forEach(v => {
     v.onmouseenter = () => v.play().catch(() => {});
     v.onmouseleave = () => v.pause();
@@ -639,8 +605,7 @@ function pintar() {
 }
 
 function tarjeta(e, ocupado) {
-  const media = e.clip ? `<video src="${archivo(e.clip)}" muted loop playsinline preload="metadata"></video><span class="clipia">clip IA ${(e.clip_s || 0).toFixed(1)} s</span>`
-    : e.imagen ? `<img src="${archivo(e.imagen)}">${e.continua ? `<span class="reusa">misma imagen que la anterior</span>` : ""}`
+  const media = e.imagen ? `<img src="${archivo(e.imagen)}">${e.continua ? `<span class="reusa">misma imagen que la anterior</span>` : ""}${e.propia ? `<span class="tuya">Tu imagen</span>` : ""}`
     : `<span>${e.continua ? "usará la imagen de la anterior" : "sin imagen · pega una con Ctrl+V"}</span>`;
   const dis = ocupado ? "disabled" : "";
   return `<div class="escena ${activa === e.n ? "activa" : ""}" data-n="${e.n}">
@@ -651,14 +616,12 @@ function tarjeta(e, ocupado) {
     <label>Narración</label><textarea rows="3" data-campo="narracion" data-n="${e.n}" ${dis}>${esc(e.narracion)}</textarea>
     <label>Qué se ve (inglés)</label><textarea rows="2" data-campo="visual" data-n="${e.n}" ${dis}>${esc(e.visual)}</textarea>
     ${e.n > 1 ? `<label class="fila"><input type="checkbox" style="width:auto" data-campo="continua" data-n="${e.n}" ${e.continua ? "checked" : ""} ${dis}> Misma imagen que la anterior (otro movimiento)</label>` : ""}
-    <label class="fila"><input type="checkbox" style="width:auto" data-campo="video_ia" data-n="${e.n}" ${e.video_ia ? "checked" : ""} ${dis}> Vídeo IA (GPU)</label>
     <input id="nota${e.n}" placeholder="nota para rehacer la imagen (opcional)" style="margin-top:6px" ${dis}>
     <div class="botones">
       <button data-copiar="${e.n}">Copiar prompt</button>
-      <button data-subir="${e.n}" ${dis}>Subir imagen</button>
+      <button data-subir="${e.n}" ${dis} title="Usa tu propia imagen en esta escena (también con Ctrl+V)">${e.imagen && !e.continua ? "Reemplazar por mi imagen" : "Subir mi imagen"}</button>
       ${e.continua ? "" : `<button data-rehacer="imagenes" data-n="${e.n}" ${dis}>Rehacer imagen</button>`}
       <button data-rehacer="voz" data-n="${e.n}" ${dis}>Rehacer voz</button>
-      ${e.video_ia && e.imagen ? `<button data-rehacer="clips" data-n="${e.n}" ${dis}>${e.clip ? "Rehacer clip" : "Hacer clip"}</button>` : ""}
     </div></div>`;
 }
 
@@ -677,24 +640,7 @@ document.addEventListener("paste", ev => {
   enviarImagen(activa, item.getAsFile());
 });
 
-function lanzarClips(solo = null) {
-  if (!config.gpu_conectada && !datos.simular) {
-    alert("La GPU de Kaggle no está conectada. Te abro el Asistente en el paso 5 para conectarla (gratis).");
-    return abrirAsistente(4);
-  }
-  if (!solo) {
-    const vi = datos.video_ia || {};
-    if (!vi.faltan) return alert("Marca «Vídeo IA (GPU)» en las escenas que quieras animar con IA (y que tengan imagen).");
-    if (!confirm(`Se mandan ${vi.faltan - (vi.sin_imagen || 0)} escenas a tu GPU de Kaggle (~${vi.horas} h de tus ${vi.horas_semana} h semanales). ¿Seguir?`)) return;
-  }
-  lanzar("clips", solo);
-}
-
 async function lanzar(paso, solo = null, nota = "") {
-  if ((paso === "imagenes" || paso === "todo") && config.motor_imagen === "kaggle" && !config.gpu_conectada && !datos.simular) {
-    alert("Las imágenes van en tu GPU de Kaggle, pero no está conectada. Te abro el Asistente en el paso 5 para conectarla (gratis), o cambia el motor de imágenes en Ajustes.");
-    return abrirAsistente(4);
-  }
   try { await api(`/api/proyectos/${actual}/paso`, { method: "POST", body: JSON.stringify({ paso, solo, nota }) }); }
   catch (e) { alert(e.message); }
   refrescar();
@@ -702,9 +648,9 @@ async function lanzar(paso, solo = null, nota = "") {
 
 
 // ------------------------------------------------------------- asistente
-let paso = 0, diag = null, gpuTimer = null;
-const PASOS_ASIS = ["bienvenida", "equipo", "guion", "imagenes", "gpu", "voz", "listo"];
-let paisAsis = null;
+let paso = 0, diag = null;
+const PASOS_ASIS = ["equipo", "gemini", "voz", "listo"];
+let proveedorAsis = null;          // paso 2: "gemini" u "openai" (por defecto, la que ya tenga clave)
 $("#abrirAsistente").onclick = () => abrirAsistente();
 $("#abrirCanal").onclick = () => { location.hash = "canal"; };
 
@@ -755,93 +701,67 @@ async function pintarCanal() {
   }
 }
 
-function abrirAsistente(inicio = 0) { paso = inicio; $("#velo").hidden = false; pintarAsistente(); }
+function abrirAsistente(inicio = 0) { paso = inicio; diag = null; $("#velo").hidden = false; pintarAsistente(); }
 function cerrarAsistente() {
-  $("#velo").hidden = true; clearTimeout(gpuTimer);
+  $("#velo").hidden = true; if (sonando) sonando.parar();
   guardarCfg({ asistente_hecho: true });
 }
 
-function opcion(nombre, valor, titulo, detalle, marcada, activa = true) {
-  return `<label class="opcion ${activa ? "" : "off"}"><input type="radio" name="${nombre}" value="${valor}" ${marcada ? "checked" : ""} ${activa ? "" : "disabled"}>
-    <span><b>${titulo}</b><small>${detalle}</small></span></label>`;
-}
 const chk = (ok, texto, malo) => `<div class="chequeo"><span class="${ok ? "bien" : "mal"}">${ok ? "✓" : "✗"}</span><span>${ok ? texto : malo}</span></div>`;
 
 async function pintarAsistente() {
   const caja = $("#asistente"), nombre = PASOS_ASIS[paso];
   let html = `<div class="paso-n">Paso ${paso + 1} de ${PASOS_ASIS.length}</div>`;
-  if (nombre === "bienvenida") {
+  if (nombre === "equipo") {
     html += `<h2>Bienvenido a Video Simple</h2>
-      <p>Escribes de qué va tu vídeo y la herramienta hace el resto: guion, voz, imágenes, animación y subtítulos. Un vídeo de 14 minutos sale solo en ~1 hora.</p>
-      <p><b>Todo es gratis.</b> No hace falta tarjeta. En 3 minutos lo dejamos listo.</p>`;
-  } else if (nombre === "equipo") {
-    html += `<h2>Comprobando tu equipo</h2><div id="diag"><p class="estado">Mirando…</p></div>`;
-  } else if (nombre === "guion") {
-    const c = diag?.claude, o = diag?.ollama && diag.ollama.length;
-    const elegido = config.motor_guion;
-    html += `<h2>¿Quién escribe el guion?</h2>
-      ${opcion("guion", "manual", "ChatGPT a mano (gratis, para todos)", "Copias un prompt, lo pegas en ChatGPT y pegas su respuesta. 1 minuto.", elegido === "manual" || (!c && elegido !== "ollama"))}
-      ${opcion("guion", "claude", "Claude, automático", c ? "Detectado en este PC: usa tu suscripción de Claude." : "No detectado (necesita el CLI de Claude con suscripción).", elegido === "claude" && c, c)}
-      ${opcion("guion", "ollama", "Ollama, automático y local", o ? `Detectado: ${diag.ollama.join(", ")}. Gratis, escribe peor.` : "No detectado (ollama.com, gratis).", elegido === "ollama" && o, o)}`;
-  } else if (nombre === "imagenes") {
-    const elegido = config.motor_imagen;
-    html += `<h2>¿De dónde salen las imágenes?</h2>
-      ${opcion("img", "pollinations", "Pollinations, automático (recomendado)", "Gratis y sin cuenta: 1 imagen cada 45 s. Un vídeo de 14 min ≈ 1 hora, solo.", elegido === "pollinations")}
-      ${opcion("img", "manual", "Las hago yo (ChatGPT, Gemini, Bing…)", "La herramienta te da el prompt de cada escena y pegas la imagen con Ctrl+V.", elegido === "manual")}
-      ${opcion("img", "kaggle", "GPU Kaggle (gratis, sin límite, mejor calidad)", `En tu GPU gratis de Kaggle, con FLUX.2: los personajes salen iguales en todo el vídeo. ${config.gpu_conectada ? "GPU conectada ✓" : "Se conecta en el paso siguiente (GPU gratis)."}`, elegido === "kaggle")}
-      <label>Clave de Pollinations (opcional: sin marca de agua y sin espera) · <a href="https://enter.pollinations.ai" target="_blank">enter.pollinations.ai</a></label>
-      <input id="asisToken" type="password" placeholder="${config.token_pollinations ? "clave guardada ✓" : "déjalo vacío si no tienes"}">`;
-  } else if (nombre === "gpu") {
-    html += `<h2>Tu servidor gratis: la GPU de Kaggle</h2>
-      <p>Lo pesado del vídeo corre en <b>tu propia GPU de Kaggle</b>: 30 horas gratis a la semana, con tu cuenta. Con ella tienes la <b>voz natural</b> (y tu voz clonada), <b>imágenes con los mismos personajes</b> y el <b>movimiento IA</b> de las escenas. Sin ella el programa funciona, pero con voces edge, imágenes de Pollinations y cámara sin movimiento IA.</p>
-      <ol>
-        <li>Crea una cuenta gratis en <a href="https://www.kaggle.com/account/login" target="_blank">kaggle.com</a> (con Google es un clic).</li>
-        <li>En <a href="https://www.kaggle.com/settings" target="_blank">Settings</a> → <i>Phone verification</i>, <b>verifica tu teléfono</b>. Sin esto Kaggle no da GPU.</li>
-        <li>En esa misma página verás tu <b>usuario</b> (arriba, junto a tu foto, o en la dirección kaggle.com/<i>usuario</i>).</li>
-        <li>Baja a la sección <b>API</b> y pulsa <b>Generate New Token</b>. Copia el token que aparece (empieza por <code>KGAT_</code>). Solo se muestra una vez: si lo pierdes, genera otro.</li>
-        <li>Pégalos aquí y pulsa <b>Conectar</b>. Después se prueba la GPU sola (2-5 min).</li>
+      <p>Das el tema y la línea gráfica, y la herramienta hace el resto: guion, voz, imágenes, animación y subtítulos. Primero, tu equipo:</p>
+      <div id="diag"><p class="estado">Mirando…</p></div>`;
+  } else if (nombre === "gemini") {
+    proveedorAsis = proveedorAsis || (config.openai && !config.gemini ? "openai" : "gemini");
+    const oa = proveedorAsis === "openai", tiene = oa ? config.openai : config.gemini;
+    html += `<h2>Tu clave de IA</h2>
+      <p>Elige con qué IA salen solos el <b>guion</b> y las <b>imágenes</b> (con tu estilo y los mismos personajes en todo el vídeo). Puedes guardar las dos.</p>
+      <div class="fila" style="margin-bottom:10px">
+        <label class="opcion" style="flex:1"><input type="radio" name="provA" value="gemini" ${oa ? "" : "checked"}><span><b>Gemini</b><small>Google · gratis · guion y voz${config.gemini ? " · guardada ✓" : ""}</small></span></label>
+        <label class="opcion" style="flex:1"><input type="radio" name="provA" value="openai" ${oa ? "checked" : ""}><span><b>OpenAI</b><small>ChatGPT · de pago (centavos por imagen) · guion e imágenes${config.openai ? " · guardada ✓" : ""}</small></span></label>
+      </div>
+      ${oa ? `<ol>
+        <li>Entra en <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a> con tu cuenta de OpenAI.</li>
+        <li>Pulsa <b>Create new secret key</b> y cópiala (empieza por <code>sk-</code>).</li>
+        <li>Pégala aquí y pulsa <b>Probar y guardar</b>.</li>
       </ol>
-      <p class="ayuda">El token se guarda solo en este computador, en <code>secretos/</code>. Nunca se comparte ni se sube a internet.</p>
-      <label>Usuario de Kaggle</label><input id="kUsuario" placeholder="tu_usuario" autocomplete="off">
-      <label>Token</label><input id="kToken" type="password" placeholder="${config.gpu_conectada ? "ya conectada ✓ (pega otro para cambiarla)" : "pega el token"}">
-      <div class="fila" style="margin-top:10px"><button class="primario" id="kConectar">Conectar</button>
-        <button id="kProbar" ${config.gpu_conectada ? "" : "disabled"}>Probar la GPU</button></div>
-      <p class="estado" id="kEstado">${config.gpu_conectada ? "Cuenta conectada." : ""}</p>`;
+      <p class="ayuda">Las imágenes (gpt-image) se cobran de tu saldo de OpenAI: necesitas crédito cargado y, a veces, verificar tu organización. La voz sigue siendo Jorge (gratis).</p>`
+      : `<ol>
+        <li>Entra en <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> con tu cuenta de Google.</li>
+        <li>Pulsa <b>Create API key</b> (Crear clave) y cópiala.</li>
+        <li>Pégala aquí y pulsa <b>Probar y guardar</b>.</li>
+      </ol>
+      <p class="ayuda">Con la capa gratis de Gemini salen el guion y la voz (Puck, Charon, Kore); para imágenes su cuota gratis es casi nula, así que sin OpenAI se usan las de Pollinations.</p>`}
+      <p class="ayuda">La clave se guarda solo en este computador, en <code>secretos/</code>. Nunca se comparte ni se sube a internet. Pégala solo aquí, nunca en un chat.</p>
+      <label>Clave de ${oa ? "OpenAI" : "Gemini"}</label><input id="gClave" type="password" autocomplete="off" placeholder="${tiene ? "ya guardada ✓ (pega otra para cambiarla)" : "pega tu clave"}">
+      <div class="fila" style="margin-top:10px"><button class="primario" id="gProbar">Probar y guardar</button>
+        ${tiene ? `<button id="gOlvidar">Borrar la clave</button>` : ""}</div>
+      <p class="estado" id="gEstado">${tiene ? "✓ Clave guardada." : "Sin clave también funciona: voz Jorge, imágenes de Pollinations y guion pegado de ChatGPT."}</p>`;
   } else if (nombre === "voz") {
-    const actualVoz = voces.find(v => v.id === config.voz);
-    paisAsis = paisAsis || actualVoz?.pais || "Colombia";
-    const paises = [...new Set(voces.map(v => v.pais))];
     html += `<h2>Elige la voz</h2>
-      <p>Pulsa ▶ para escucharla. Luego la puedes cambiar en cada vídeo, en el panel de la izquierda.</p>
-      <label>País</label><select id="asisPais">${paises.map(p => `<option ${p === paisAsis ? "selected" : ""}>${esc(p)}</option>`).join("")}</select>
-      <div class="voces-pais">${voces.filter(v => v.pais === paisAsis).map(v =>
-        `<label class="opcion"><input type="radio" name="vozA" value="${v.id}" ${v.id === config.voz ? "checked" : ""}>
-          <span><b>${esc(v.nombre)}</b><small>${esc(v.pais)}${v.genero ? " · " + v.genero : ""}</small></span>
-          <button type="button" class="oir" data-oir="${v.id}">▶ Escuchar</button></label>`).join("")}</div>`;
+      <p>Pulsa ▶ para escucharla. Luego la puedes cambiar en cada vídeo.</p>
+      ${voces.map(v => `<label class="opcion ${v.gemini && !v.lista ? "off" : ""}"><input type="radio" name="vozA" value="${v.id}" ${v.id === config.voz ? "checked" : ""} ${v.gemini && !v.lista ? "disabled" : ""}>
+          <span><b>${esc(v.nombre)}</b><small>${v.gemini ? `Gemini · ${esc(v.genero)} ${esc(v.detalle)}${v.lista ? "" : " · necesita la clave"}` : `${esc(v.pais)} · ${esc(v.genero)} · gratis, sin clave`}</small></span>
+          <button type="button" class="oir" data-oir="${v.id}" ${v.gemini && !v.lista ? "disabled" : ""}>▶ Escuchar</button></label>`).join("")}`;
   } else {
     html += `<h2>¡Listo!</h2>
-      <p>Crea tu primer vídeo a la izquierda: título, de qué va, minutos y estilo. Luego pulsa <b>Hacer todo</b>.</p>
-      <p class="estado">Consejo: prueba primero con 1 minuto para ver el estilo, y después ve a por los 14.</p>`;
+      <p>Crea tu primer vídeo a la izquierda: título, tema, minutos y la línea gráfica (texto o una imagen de ejemplo). Con «Hacerlo todo solo» marcado, al pulsar <b>Crear</b> sale el vídeo entero.</p>
+      <p class="estado">Consejo: prueba primero con 1 minuto para ver el estilo. En cualquier escena puedes poner tu propia imagen.</p>`;
   }
   html += `<div class="navegar">
       <button id="asisAtras" ${paso === 0 ? "disabled" : ""}>Atrás</button>
-      <div class="fila">${nombre === "gpu" ? `<button id="asisSaltar">Saltar</button>` : ""}
+      <div class="fila">${nombre === "gemini" && !config.gemini && !config.openai ? `<button id="asisSaltar">Seguir sin clave</button>` : ""}
       <button class="primario" id="asisSig">${paso === PASOS_ASIS.length - 1 ? "Empezar" : "Siguiente"}</button></div></div>`;
   caja.innerHTML = html;
 
   $("#asisAtras").onclick = () => { paso--; pintarAsistente(); };
   if ($("#asisSaltar")) $("#asisSaltar").onclick = () => { paso++; pintarAsistente(); };
   $("#asisSig").onclick = async () => {
-    if (nombre === "guion") {
-      const v = document.querySelector('input[name="guion"]:checked');
-      if (v) await guardarCfg({ motor_guion: v.value });
-    }
-    if (nombre === "imagenes") {
-      const v = document.querySelector('input[name="img"]:checked');
-      const cambio = v ? { motor_imagen: v.value } : {};
-      if ($("#asisToken").value.trim()) cambio.token_pollinations = $("#asisToken").value.trim();
-      await guardarCfg(cambio);
-    }
     if (nombre === "voz") {
       const v = document.querySelector('input[name="vozA"]:checked');
       if (v) { await guardarCfg({ voz: v.value }); const s = $("#nVozCaja select"); if (s) s.value = v.value; }
@@ -851,37 +771,43 @@ async function pintarAsistente() {
   };
 
   if (nombre === "voz") {
-    $("#asisPais").onchange = ev => { paisAsis = ev.target.value; pintarAsistente(); };
     caja.querySelectorAll("[data-oir]").forEach(b => b.onclick = ev => { ev.preventDefault(); oir(b.dataset.oir, b); });
   }
   if (nombre === "equipo") {
     diag = diag || await api("/api/diagnostico").catch(() => ({}));
     $("#diag").innerHTML =
       chk(diag.ffmpeg, "Motor de vídeo (ffmpeg) incluido", "Falta ffmpeg") +
-      chk(diag.voz, "Voces en español funcionando", "La voz no responde: revisa tu conexión") +
-      chk(diag.internet, "Conexión con el generador de imágenes", "Sin conexión con Pollinations") +
-      chk(diag.claude, "Claude detectado (guion automático)", "Claude no está: el guion lo harás con ChatGPT (gratis)") +
-      chk(diag.ollama && diag.ollama.length, "Ollama detectado", "Ollama no está (opcional)");
+      chk(diag.voz, "Voz Jorge (gratis) funcionando", "La voz no responde: revisa tu conexión") +
+      chk(diag.internet, "Conexión con internet", "Sin conexión: hace falta para la voz y las imágenes") +
+      chk(diag.gemini || diag.openai, `Clave de ${[diag.gemini && "Gemini", diag.openai && "OpenAI"].filter(Boolean).join(" y ")} guardada`, "Sin clave de IA todavía (Gemini u OpenAI): se pega en el paso siguiente") +
+      (diag.claude ? chk(true, "Claude detectado (alternativa para el guion, en Ajustes)") : "") +
+      (diag.ollama && diag.ollama.length ? chk(true, `Ollama detectado: ${esc(diag.ollama.join(", "))} (alternativa para el guion)`) : "");
   }
-  if (nombre === "gpu") {
-    $("#kConectar").onclick = async () => {
-      $("#kEstado").textContent = "Comprobando con Kaggle…";
+  if (nombre === "gemini") {
+    const oa = proveedorAsis === "openai", ruta = oa ? "/api/openai" : "/api/gemini", quien = oa ? "OpenAI" : "Gemini";
+    caja.querySelectorAll('input[name="provA"]').forEach(r => r.onchange = () => { proveedorAsis = r.value; pintarAsistente(); });
+    $("#gProbar").onclick = async () => {
+      const clave = $("#gClave").value.trim();
+      if (!clave) return $("#gEstado").textContent = (oa ? config.openai : config.gemini) ? "✓ Ya tienes una clave guardada." : "Pega primero tu clave.";
+      $("#gEstado").textContent = `Probando con ${quien}…`;
       try {
-        await api("/api/gpu/conectar", { method: "POST", body: JSON.stringify({ usuario: $("#kUsuario").value, token: $("#kToken").value }) });
-        config.gpu_conectada = true;
-        $("#kEstado").textContent = "✓ Cuenta conectada. Probando la GPU…";
-        $("#kProbar").disabled = false;
-        $("#kProbar").click();                 // la prueba va sola: una persona nueva no sabe que falta
-      } catch (e) { $("#kEstado").textContent = "✗ " + e.message; }
+        const r = await api(ruta, { method: "POST", body: JSON.stringify({ clave }) });
+        const cambio = {};
+        if (oa) { cambio.motor_guion = "openai"; cambio.motor_imagen = "openai"; }
+        else {
+          if (config.motor_guion === "manual") cambio.motor_guion = "gemini";
+          if (config.motor_imagen === "pollinations") cambio.motor_imagen = "gemini";
+        }
+        await guardarCfg(cambio);
+        voces = await api("/api/voces"); pintarCfg();
+        pintarAsistente();
+        $("#gEstado").textContent = `✓ Clave válida y guardada. Guion: ${r.modelos.texto} · voz: ${r.modelos.voz || "Jorge"} · imágenes: ${r.modelos.imagen}`;
+      } catch (e) { $("#gEstado").textContent = "✗ " + e.message; }
     };
-    $("#kProbar").onclick = async () => {
-      try { await api("/api/gpu/probar", { method: "POST" }); } catch (e) { $("#kEstado").textContent = "✗ " + e.message; return; }
-      const mirar = async () => {
-        const e = await api("/api/gpu/estado");
-        $("#kEstado").textContent = (e.fase === "ok" ? "✓ " : e.fase === "probando" ? "⏳ " : "✗ ") + e.detalle;
-        if (e.fase === "probando") gpuTimer = setTimeout(mirar, 4000);
-      };
-      mirar();
+    if ($("#gOlvidar")) $("#gOlvidar").onclick = async () => {
+      if (!confirm(`¿Borrar la clave de ${quien} de este computador?`)) return;
+      await api(ruta, { method: "DELETE" });
+      await guardarCfg({}); voces = await api("/api/voces"); pintarCfg(); pintarAsistente();
     };
   }
 }
@@ -920,7 +846,7 @@ function mostrarAcceso(modo) {
   $("#velo").hidden = false;
   $("#asistente").innerHTML = `<div class="acceso">
     <h2>${modo === "entrar" ? "Entra en tu cuenta" : "Crea tu cuenta"}</h2>
-    <p class="estado">Tus vídeos y tus claves (Kaggle, Pollinations) son solo tuyos.</p>
+    <p class="estado">Tus vídeos y tus claves (Gemini, Pollinations) son solo tuyos.</p>
     <div class="pestanas"><button data-modo="entrar" class="${modo === "entrar" ? "activa" : ""}">Entrar</button>
       <button data-modo="registro" class="${modo === "registro" ? "activa" : ""}">Crear cuenta</button></div>
     <label>Usuario</label><input id="aUsuario" autocomplete="username">

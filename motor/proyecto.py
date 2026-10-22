@@ -18,7 +18,7 @@ from . import usuarios
 RAIZ = Path(__file__).resolve().parent.parent
 PROYECTOS = RAIZ / "proyectos"
 CONFIG = RAIZ / "config.json"
-# Claves de cada persona (Pollinations, Kaggle): un fichero por usuario en
+# Claves de cada persona (Gemini, Pollinations): un fichero por usuario en
 # secretos/<usuario>.json. Nunca en config.json: la carpeta esta en .gitignore
 # y no se sube al repositorio.
 SECRETOS_DIR = RAIZ / "secretos"

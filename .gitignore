@@ -1,8 +1,6 @@
 .venv/
 __pycache__/
 proyectos/
-gpu_trabajos/
-.kaggle/
 secretos/
 secretos.json
 .env
@@ -11,3 +9,4 @@ sesiones.json
 voces_muestra/
 web/ejemplo/*.mp4
 canal/
+modelos/
