@@ -25,7 +25,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from motor import canal, gemini, guion, imagenes, montaje, nichos, openai_img, proyecto, usuarios, voz
+from motor import canal, gemini, guion, imagenes, montaje, navegador, nichos, openai_img, proyecto, usuarios, voz
 
 app = FastAPI(title="Video Simple")
 WEB = proyecto.RAIZ / "web"
@@ -356,9 +356,9 @@ def guardar_config(a: Ajustes):
     cfg = proyecto.config()
     if a.voz:
         cfg["voz"]["voz"] = _voz_valida(a.voz)
-    if a.motor_imagen in ("gemini", "openai", "pollinations", "manual"):
+    if a.motor_imagen in ("gemini", "openai", "puter", "pollinations", "manual"):
         cfg["imagen"]["motor"] = a.motor_imagen
-    if a.motor_guion in ("gemini", "openai", "claude", "ollama", "manual"):
+    if a.motor_guion in ("gemini", "openai", "puter", "claude", "ollama", "manual"):
         cfg["guion"]["motor"] = a.motor_guion
     if a.token_pollinations is not None:
         proyecto.guardar_secreto("pollinations_token", a.token_pollinations.strip())
@@ -431,6 +431,7 @@ def ver(pid: str):
     if not datos["ocupado"] and datos.get("trabajo"):
         datos["trabajo"] = None            # quedo a medias al cerrar el programa
         datos["voz_navegador"] = None
+    datos["pedido_navegador"] = navegador.pendiente(pid) if datos["ocupado"] else None
     datos["estimacion"] = imagenes.estimar(datos)
     datos["prompts"] = {e["n"]: imagenes.prompt_de(datos, e) for e in datos["escenas"]}
     datos["sello"] = time.time()
@@ -487,6 +488,21 @@ def editar_escena(pid: str, n: int, cambio: Escena):
     datos["mp4"] = None
     proyecto.guardar(datos)
     return ver(pid)
+
+
+class RespuestaNavegador(BaseModel):
+    id: str
+    resultado: str | None = None    # el texto, o la imagen en data URL
+    error: str = ""
+
+
+@app.post("/api/proyectos/{pid}/navegador")
+def respuesta_navegador(pid: str, r: RespuestaNavegador):
+    """La pestaña contesta un pedido de Puter (guion o imagen) del paso en marcha."""
+    _mio(pid)
+    if not navegador.responder(pid, r.id, r.resultado, r.error):
+        raise HTTPException(409, "Ese pedido ya no está pendiente.")
+    return {"ok": True}
 
 
 class AudioEscena(BaseModel):

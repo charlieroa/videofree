@@ -64,6 +64,23 @@ Pégala solo en la app, nunca en un chat. Puedes cambiarla cuando quieras en **A
 
 ### 4. Hacer tu primer vídeo
 
+Pulsa **+ Crear vídeo**: un asistente de 5 pasos te lleva de la mano.
+
+1. **¿Cómo?** ⚡ **Automático** (la IA hace todo y al final tienes el MP4) o ✋ **Manual** (tú
+   revisas el guion y lanzas cada paso).
+2. **¿De qué trata?** Escribe el tema, o pulsa **💡 Buscar ideas en los nichos de YouTube** y
+   elige uno con **Usar este tema**. La IA escribe el guion.
+3. **Tu línea gráfica**: estilo en palabras, imagen de ejemplo y tus fotos (todo opcional).
+4. **La voz**: escúchalas y elige.
+5. **Todo listo**: te dice qué IA hará cada cosa. Si es Puter, pulsa **Conectar Puter** y **Crear vídeo**.
+
+**Sin ninguna clave, gratis con Puter.** El guion, las imágenes (Gemini) y las voces Puck,
+Charon y Kore salen de tu cuenta gratis de [Puter](https://puter.com): lo hace tu navegador,
+así que deja abierta la pestaña del vídeo mientras trabaja. Si se acaban los créditos de
+Puter, las imágenes siguen con Pollinations y puedes cambiar a una voz gratis.
+
+Los detalles de cada paso:
+
 1. En el panel de la izquierda, en **🎙 Voz**, elige la voz.
 2. Llena **Título**, **Tema** (pega un texto, un resumen o tus ideas) y **Minutos**.
 3. **Línea gráfica**: escribe el estilo (p. ej. «ilustración acuarela, colores cálidos») y/o

@@ -109,6 +109,20 @@ girarla según el EXIF), con la proporción final (1:1 o 16:9). Puede salirse de
 < 1): el hueco se rellena con la foto ampliada, desenfocada y oscurecida. Solo se reescala el
 trozo que cae dentro, no la foto entera. Sin `recorte`, el encuadre automático de siempre.
 
+## Guion e imágenes sin clave (Puter)
+
+Sin clave de Gemini ni de OpenAI, `guion.motor_efectivo()` e `imagenes.motor_efectivo()`
+devuelven `puter`. El servidor no puede llamar a Puter, así que `motor/navegador.py` deja un
+**pedido** en memoria (uno por vídeo) y bloquea el paso; `GET /api/proyectos/<id>` lo da como
+`pedido_navegador`, la pestaña llama a Puter y contesta en `POST /api/proyectos/<id>/navegador`.
+
+- `texto`: `puter.ai.chat` con el Gemini flash más nuevo de `puter.ai.listModels()` (o el de
+  serie de Puter); ve la imagen de ejemplo.
+- `imagen`: `puter.ai.txt2img(prompt, {provider: "gemini", aspect_ratio: "16:9", input_images})`
+  con las mismas referencias que Gemini (estilo, hoja de personajes, tus fotos). Se recorta a 16:9.
+- Sin respuesta en 10 min o sin créditos (`insufficient_funds`): las imágenes siguen con
+  Pollinations; el guion se corta con un mensaje.
+
 ## Voces de Gemini sin clave (Puter)
 
 Sin clave de Gemini, Puck, Charon y Kore las narra el **navegador** con

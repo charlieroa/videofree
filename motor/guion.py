@@ -21,7 +21,7 @@ import tempfile
 
 import requests
 
-from . import gemini, imagenes, openai_img, proyecto
+from . import gemini, imagenes, navegador, openai_img, proyecto
 
 PLANTILLA = """Eres guionista y director de un canal de YouTube de videos narrados.
 Convierte el MATERIAL en un video de unos {minutos} minutos, narrado en espanol.
@@ -222,14 +222,14 @@ def _por_capitulos(datos, cfg, llamar, nombre, avisar):
 
 def motor_efectivo(datos=None):
     """El motor que de verdad se usa: Gemini sin clave pasa a OpenAI si hay su clave,
-    y si no, a «a mano». OpenAI sin clave, a mano."""
+    y si no, a Puter (gratis, en el navegador). OpenAI sin clave, a Puter."""
     if datos and datos.get("simular"):
         return "prueba"
     motor = proyecto.config()["guion"]["motor"]
     if motor == "gemini" and not gemini.hay_clave():
-        return "openai" if openai_img.hay_clave() else "manual"
+        return "openai" if openai_img.hay_clave() else "puter"
     if motor == "openai" and not openai_img.hay_clave():
-        return "manual"
+        return "puter"
     return motor
 
 
@@ -265,6 +265,12 @@ def ejecutar(datos, avisar):
             extra = NOTA_REFERENCIA if ref else ""
             llamar = lambda p: _extraer_json(openai_img.texto(extra + p, avisar,
                                                               imagenes=[ref] if ref else []))
+        elif motor == "puter":
+            nombre = "Puter (Gemini, en tu navegador)"
+            ref = imagenes.referencia(datos)
+            extra = NOTA_REFERENCIA if ref else ""
+            llamar = lambda p: _extraer_json(navegador.texto(datos, extra + p, avisar,
+                                                             imagenes=[ref] if ref else []))
         elif motor == "ollama":
             nombre = f"Ollama ({cfg['modelo_ollama']})"
             llamar = lambda p: _extraer_json(_ollama(p, cfg["modelo_ollama"]))

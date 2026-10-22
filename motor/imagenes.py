@@ -12,6 +12,10 @@ Formas de conseguirla (config.json -> imagen.motor, o cada escena a mano):
                 por imagen). Mismas referencias que Gemini: imagen de ejemplo y
                 hoja de personajes. Si hay clave de OpenAI se prefiere a Gemini,
                 porque la capa gratis de Gemini no da cuota de imagenes.
+  puter         Gemini imagen GRATIS con la cuenta de Puter de la persona: la genera
+                su navegador (motor/navegador.py). Es lo que se usa sin ninguna
+                clave. Mismas referencias que Gemini. Sin creditos o sin la pestaña
+                abierta, sigue con Pollinations.
   pollinations  Flux por la API publica de Pollinations: gratis, sin clave,
                 una cada ~45 s por IP. Con una clave (enter.pollinations.ai)
                 va sin marca de agua.
@@ -46,7 +50,7 @@ import urllib.parse
 import requests
 from PIL import Image, ImageDraw, ImageFont
 
-from . import gemini, openai_img, proyecto
+from . import gemini, navegador, openai_img, proyecto
 
 _ultima_llamada = [0.0]
 
@@ -240,7 +244,7 @@ def _asegurar_hoja(datos, avisar):
         prompt = ("Reference image: the STYLE example. Copy only its visual style (technique, "
                   "palette, lighting); do not copy its subject. " + prompt)
     destino = _carpeta(datos) / "hoja.jpg"
-    _ia(motor_efectivo(datos)).imagen(prompt, destino, [ref] if ref else [], avisar)
+    _ia(motor_efectivo(datos), datos).imagen(prompt, destino, [ref] if ref else [], avisar)
     datos["hoja"] = proyecto.relativa(datos, destino)
     datos["hoja_firma"] = firma_hoja(datos)
     proyecto.guardar(datos)
@@ -248,13 +252,16 @@ def _asegurar_hoja(datos, avisar):
     return destino
 
 
-_NOMBRE = {"gemini": "Gemini", "openai": "OpenAI", "pollinations": "Pollinations"}
-_ERRORES = (gemini.ErrorGemini, openai_img.ErrorOpenAI)
-_CUOTA = (gemini.ErrorCuota, openai_img.ErrorCuota)
+_NOMBRE = {"gemini": "Gemini", "openai": "OpenAI", "puter": "Puter", "pollinations": "Pollinations"}
+_ERRORES = (gemini.ErrorGemini, openai_img.ErrorOpenAI, navegador.ErrorNavegador)
+_CUOTA = (gemini.ErrorCuota, openai_img.ErrorCuota, navegador.SinCreditos, navegador.SinRespuesta)
+_IA = ("gemini", "openai", "puter")
 
 
-def _ia(motor):
-    """El modulo que dibuja: los dos tienen imagen(prompt, destino, referencias, avisar)."""
+def _ia(motor, datos):
+    """Lo que dibuja: los tres tienen imagen(prompt, destino, referencias, avisar)."""
+    if motor == "puter":
+        return navegador.Imagenes(datos)
     return openai_img if motor == "openai" else gemini
 
 
@@ -270,7 +277,7 @@ def _con_ia(datos, e, destino, avisar, nota, hoja, motor):
                   f"person, place or brand). When the scene shows that subject, reproduce it "
                   f"faithfully from those photos (shape, colors, logo, face); adapt pose, angle "
                   f"and background to the scene. " + prompt)[:2500]
-    _ia(motor).imagen(prompt, destino, refs + mias, avisar)
+    _ia(motor, datos).imagen(prompt, destino, refs + mias, avisar)
 
 
 # ------------------------------------------------------------- el paso
@@ -278,7 +285,7 @@ def _con_ia(datos, e, destino, avisar, nota, hoja, motor):
 def motor_efectivo(datos=None):
     """El motor que de verdad se usa. Con «gemini» (el de serie) y clave de OpenAI,
     OpenAI: la capa gratis de Gemini da cuota 0 de imagenes. Sin ninguna clave,
-    Pollinations."""
+    Puter (gratis, en el navegador)."""
     if datos and datos.get("simular"):
         return "prueba"
     motor = proyecto.config()["imagen"]["motor"]
@@ -287,7 +294,7 @@ def motor_efectivo(datos=None):
             return "openai"
         if motor == "gemini" and gemini.hay_clave():
             return "gemini"
-        return "pollinations"
+        return "puter"
     return motor
 
 
@@ -297,7 +304,7 @@ def generar_una(datos, e, avisar, nota="", motor=None, hoja=None):
     if motor == "prueba":
         destino = destino.with_suffix(".png")
         _prueba(e["narracion"], destino, e["n"])
-    elif motor in ("gemini", "openai"):
+    elif motor in _IA:
         _con_ia(datos, e, destino, avisar, nota, hoja, motor)
     elif motor == "pollinations":
         prompt = prompt_de(datos, e) + (f". {nota}" if nota else "")
@@ -447,7 +454,7 @@ def ejecutar(datos, avisar, solo=None, nota=""):
                else "Faltan imagenes en algunas escenas.")
         return
     hoja = None
-    if motor in ("gemini", "openai") and any(usa_hoja(datos, e) for e in pendientes):
+    if motor in _IA and any(usa_hoja(datos, e) for e in pendientes):
         try:
             hoja = _asegurar_hoja(datos, avisar)
         except _CUOTA as err:
@@ -483,8 +490,8 @@ def estimar(datos):
     if datos.get("fotos_modo") == "escenas" and datos.get("fotos"):
         return {"imagenes": faltan, "minutos_imagenes": 0, "motor": "fotos",
                 "simular": bool(datos.get("simular"))}
-    if motor in ("gemini", "openai"):
-        por_imagen = 15 if motor == "gemini" else 30
+    if motor in _IA:
+        por_imagen = {"gemini": 15, "openai": 30, "puter": 20}[motor]
     else:
         por_imagen = 8 if proyecto.secretos().get("pollinations_token") else cfg["espera_s"]
     return {"imagenes": faltan,

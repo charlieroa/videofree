@@ -109,6 +109,13 @@
   .ayuda { font-size: 13px; color: var(--suave); border-left: 3px solid var(--acento); padding: 4px 10px; margin: 8px 0; }
   .velo { position: fixed; inset: 0; background: #0008; display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
   .velo[hidden] { display: none; }
+  .mago section[hidden] { display: none; }
+  .mago .ideas { width: 100%; margin: 4px 0 6px; padding: 10px; border-style: dashed; }
+  .crear-panel .grande { width: 100%; font-size: 17px; padding: 14px; }
+  .resumen { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 10px 0; font-size: 14px; }
+  .resumen dt { color: var(--suave); }
+  .resumen dd { margin: 0; }
+  .puter-caja { border: 1px solid var(--acento); border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 14px; }
   .asistente { background: var(--panel); border-radius: 12px; max-width: 640px; width: 100%; max-height: 92vh; overflow: auto; padding: 24px; }
   .asistente h2 { font-size: 20px; margin-bottom: 4px; }
   .asistente .paso-n { font-size: 12px; color: var(--suave); text-transform: uppercase; letter-spacing: .05em; }
@@ -230,8 +237,8 @@
   <div class="ajustes" id="ajustes" hidden>
     <h2>Ajustes</h2>
     <div class="grupo">Claves de IA <span class="fila"><span id="estadoGemini" class="estado"></span><button id="cambiarGemini">Cambiar</button></span></div>
-    <div class="grupo">Guion <select id="motorGuion"><option value="gemini">Gemini (automático)</option><option value="openai">OpenAI (automático)</option><option value="manual">ChatGPT a mano</option><option value="claude">Claude (tu suscripción)</option><option value="ollama">Ollama (local)</option></select></div>
-    <div class="grupo">Imágenes <select id="motorImagen"><option value="gemini">Gemini (con tu estilo y personajes iguales)</option><option value="openai">OpenAI gpt-image (de pago, la mejor calidad)</option><option value="pollinations">Pollinations (gratis, sin clave)</option><option value="manual">Las pego yo (ChatGPT…)</option></select></div>
+    <div class="grupo">Guion <select id="motorGuion"><option value="gemini">Gemini (automático)</option><option value="openai">OpenAI (automático)</option><option value="puter">Puter (gratis con tu cuenta)</option><option value="manual">ChatGPT a mano</option><option value="claude">Claude (tu suscripción)</option><option value="ollama">Ollama (local)</option></select></div>
+    <div class="grupo">Imágenes <select id="motorImagen"><option value="gemini">Gemini (con tu estilo y personajes iguales)</option><option value="openai">OpenAI gpt-image (de pago, la mejor calidad)</option><option value="puter">Puter (Gemini gratis con tu cuenta)</option><option value="pollinations">Pollinations (gratis, sin clave)</option><option value="manual">Las pego yo (ChatGPT…)</option></select></div>
     <div class="grupo">Voz <select id="voz"></select></div>
     <div class="grupo">Clave Pollinations <span class="fila"><input id="token" type="password" placeholder="opcional, quita la marca de agua"><button id="guardarToken">Guardar</button></span></div>
   </div>
@@ -239,40 +246,9 @@
 
 <main>
   <aside>
-    <div class="panel panel-voz" style="margin-bottom:16px">
-      <h2>🎙 Voz</h2>
-      <p class="estado" style="margin:0 0 8px">Elige y escucha la voz de tus vídeos nuevos. Puck, Charon y Kore son de Gemini (gratis, con tu clave de Gemini); sin esa clave se narra con Jorge.</p>
-      <div id="nVozCaja"></div>
-    </div>
-    <div class="panel">
-      <h2>Nuevo vídeo</h2>
-      <label>Título</label><input id="nTitulo" placeholder="Ej.: La caída de Roma">
-      <label>Tema (lo que quieres contar)</label>
-      <textarea id="nTexto" rows="8" placeholder="Pega aquí el texto, un resumen o las ideas del vídeo"></textarea>
-      <label>Minutos</label><input id="nMinutos" type="number" min="0.5" step="0.5" value="1">
-      <label>Línea gráfica (opcional)</label><input id="nEstilo" placeholder="Ej.: ilustración acuarela, colores cálidos">
-      <label>Imagen de ejemplo del estilo (opcional)</label>
-      <div class="ref-nueva"><img id="nRefVista" alt="" hidden><button type="button" id="nRefSubir">Subir imagen</button>
-        <button type="button" id="nRefQuitar" hidden>Quitar</button><input type="file" id="nRef" accept="image/*" hidden></div>
-      <p class="estado" style="margin:4px 0 0">Con Gemini u OpenAI, todas las imágenes copian su estilo (no su contenido).</p>
-      <label>Tus fotos (opcional: tu producto, tu cara, tu local…)</label>
-      <div class="fotos" id="nFotosVista"></div>
-      <div class="fila"><button type="button" id="nFotosSubir">Subir fotos</button><input type="file" id="nFotos" accept="image/*" multiple hidden></div>
-      <div class="fotos-modo" id="nFotosModo" hidden>
-        <label><input type="radio" name="nFotosModo" value="referencia" checked> La IA crea las imágenes a partir de ellas</label>
-        <label><input type="radio" name="nFotosModo" value="escenas"> Usar mis fotos tal cual en el vídeo</label></div>
-      <label>Tono de la narración</label>
-      <select id="nTono">
-        <option value="">Divulgativo y ameno</option>
-        <option value="humor">Humor y cercano (tipo «Ancient Life»)</option>
-        <option value="documental">Documental serio</option>
-        <option value="infantil">Infantil</option>
-        <option value="inspirador">Inspirador / devocional (tipo «BibleFix»)</option>
-        <option value="misterio">Misterio e intriga</option>
-      </select>
-      <label class="fila"><input id="nAuto" type="checkbox" style="width:auto" checked> Hacerlo todo solo al crear (guion, voz, imágenes y montaje)</label>
-      <label class="fila"><input id="nSimular" type="checkbox" style="width:auto"> Modo prueba (sin IA: trocea tu texto, voz muda e imágenes de prueba)</label>
-      <div style="margin-top:12px"><button class="primario" id="crear">Crear</button></div>
+    <div class="panel crear-panel">
+      <button class="primario grande" id="abrirMago">+ Crear vídeo</button>
+      <p class="estado" style="margin:8px 0 0">Te guía paso a paso: tema (o una idea de los nichos de YouTube), estilo, fotos y voz.</p>
     </div>
     <div class="panel lista" style="margin-top:16px">
       <h2>Vídeos</h2><div id="lista"></div>
@@ -308,6 +284,66 @@
 
 <input type="file" id="archivo" accept="image/*" hidden>
 <div id="velo" class="velo" hidden><div class="asistente" id="asistente"></div></div>
+
+<!-- Crear vídeo: el asistente paso a paso. Los campos guardan sus id de siempre. -->
+<div id="mago" class="velo" hidden><div class="asistente mago">
+  <div class="paso-n" id="magoPasoN"></div>
+  <section data-mago="modo">
+    <h2>¿Cómo quieres crearlo?</h2>
+    <label class="opcion"><input type="radio" name="magoModo" value="auto" checked><span><b>⚡ Automático</b><small>Das el tema y la IA hace todo: guion, voz, imágenes y montaje. Al final tienes el MP4.</small></span></label>
+    <label class="opcion"><input type="radio" name="magoModo" value="manual"><span><b>✋ Manual</b><small>Se crea el vídeo y tú lanzas cada paso: revisas el guion, cambias imágenes, eliges cuándo montar.</small></span></label>
+    <label class="fila" style="margin-top:10px"><input id="nSimular" type="checkbox" style="width:auto"> Modo prueba (sin IA: para ver el montaje en segundos)</label>
+    <input id="nAuto" type="checkbox" checked hidden>
+  </section>
+  <section data-mago="tema" hidden>
+    <h2>¿De qué trata?</h2>
+    <button type="button" class="ideas" id="magoIdeas">💡 Buscar ideas en los nichos de YouTube</button>
+    <label>Tema (lo que quieres contar)</label>
+    <textarea id="nTexto" rows="6" placeholder="Ej.: cómo vivían los niños en la antigua Roma. O pega un texto, un resumen o tus ideas: la IA escribe el guion."></textarea>
+    <label>Título</label><input id="nTitulo" placeholder="Ej.: La caída de Roma (si lo dejas vacío, se saca del tema)">
+    <div class="fila" style="gap:12px;align-items:flex-end">
+      <div style="flex:1"><label>Tono de la narración</label>
+      <select id="nTono">
+        <option value="">Divulgativo y ameno</option>
+        <option value="humor">Humor y cercano (tipo «Ancient Life»)</option>
+        <option value="documental">Documental serio</option>
+        <option value="infantil">Infantil</option>
+        <option value="inspirador">Inspirador / devocional (tipo «BibleFix»)</option>
+        <option value="misterio">Misterio e intriga</option>
+      </select></div>
+      <div style="width:110px"><label>Minutos</label><input id="nMinutos" type="number" min="0.5" step="0.5" value="1"></div>
+    </div>
+    <p class="estado" id="magoAvisoTema"></p>
+  </section>
+  <section data-mago="estilo" hidden>
+    <h2>Tu línea gráfica</h2>
+    <p class="estado" style="margin-top:0">Todo opcional: si no pones nada, la IA elige el estilo que encaje con el tema.</p>
+    <label>Estilo en palabras</label><input id="nEstilo" placeholder="Ej.: ilustración acuarela, colores cálidos">
+    <label>Imagen de ejemplo del estilo</label>
+    <div class="ref-nueva"><img id="nRefVista" alt="" hidden><button type="button" id="nRefSubir">Subir imagen</button>
+      <button type="button" id="nRefQuitar" hidden>Quitar</button><input type="file" id="nRef" accept="image/*" hidden></div>
+    <p class="estado" style="margin:4px 0 0">Todas las imágenes copiarán su estilo (no su contenido).</p>
+    <label>Tus fotos (tu producto, tu cara, tu local…)</label>
+    <div class="fotos" id="nFotosVista"></div>
+    <div class="fila"><button type="button" id="nFotosSubir">Subir fotos</button><input type="file" id="nFotos" accept="image/*" multiple hidden></div>
+    <div class="fotos-modo" id="nFotosModo" hidden>
+      <label><input type="radio" name="nFotosModo" value="referencia" checked> La IA crea las imágenes a partir de ellas</label>
+      <label><input type="radio" name="nFotosModo" value="escenas"> Usar mis fotos tal cual en el vídeo</label></div>
+  </section>
+  <section data-mago="voz" hidden>
+    <h2>La voz</h2>
+    <p class="estado" style="margin-top:0">Pulsa ▶ para escucharla. Puck, Charon y Kore son de Gemini: con tu clave, o gratis con tu cuenta de Puter. Las demás son gratis y sin nada.</p>
+    <div id="nVozCaja"></div>
+  </section>
+  <section data-mago="listo" hidden>
+    <h2>Todo listo</h2>
+    <div id="magoResumen"></div>
+  </section>
+  <div class="navegar">
+    <button id="magoAtras">Cancelar</button>
+    <div class="fila"><button class="primario" id="magoSig">Siguiente</button><button class="primario" id="crear" hidden>Crear vídeo</button></div>
+  </div>
+</div></div>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -353,6 +389,70 @@ async function vozPuter(texto, vozId) {
   await cargarPuter();
   const a = await puter.ai.txt2speech(texto, { provider: "gemini", voice: vozId.split(":")[1] });
   return await (await fetch(a.src)).blob();
+}
+const errorDe = err => err?.message || err?.error?.message || (typeof err === "string" ? err : JSON.stringify(err));
+// Qué hace Puter en este vídeo (para el aviso) y si lo usa.
+function usaPuter(d) {
+  return !d.simular && (voces.find(v => v.id === (d.voz || config.voz))?.puter
+    || config.guion_efectivo === "puter" || d.estimacion?.motor === "puter" || d.pedido_navegador || d.voz_navegador);
+}
+function quePuter(d) {
+  const partes = [];
+  if (config.guion_efectivo === "puter") partes.push("El guion");
+  if (d.estimacion?.motor === "puter") partes.push(partes.length ? "las imágenes" : "Las imágenes");
+  if (voces.find(v => v.id === (d.voz || config.voz))?.puter) partes.push(partes.length ? "la voz" : "La voz");
+  return partes.length ? partes.join(", ").replace(/, ([^,]*)$/, " y $1") : "Esto";
+}
+let modeloTextoPuter = null;
+async function modeloTexto() {          // el Gemini flash más nuevo que ofrezca Puter
+  if (modeloTextoPuter !== null) return modeloTextoPuter;
+  try {
+    const ids = (await puter.ai.listModels()).map(m => typeof m === "string" ? m : m.id).filter(Boolean);
+    const g = ids.filter(i => /^gemini-[\d.]+-flash(-preview)?$/.test(i)).sort((a, b) => parseFloat(b.slice(7)) - parseFloat(a.slice(7)));
+    modeloTextoPuter = g[0] || "";
+  } catch { modeloTextoPuter = ""; }
+  return modeloTextoPuter;
+}
+const blobsDe = (pid, rels) => Promise.all((rels || []).map(rel => fetch(`/archivos/${pid}/${rel}`).then(r => r.blob())));
+async function textoPuter(prompt, blobs) {
+  await cargarPuter();
+  const opciones = { normalize: true }, modelo = await modeloTexto();
+  if (modelo) opciones.model = modelo;
+  const archivos = blobs.map((b, i) => new File([b], `ref${i}.jpg`, { type: b.type || "image/jpeg" }));
+  const r = archivos.length ? await puter.ai.chat(prompt, archivos[0], false, opciones) : await puter.ai.chat(prompt, opciones);
+  const c = r?.message?.content;
+  return typeof c === "string" ? c : Array.isArray(c) ? c.map(x => x.text || "").join("") : String(r);
+}
+async function imagenPuter(prompt, blobs) {
+  await cargarPuter();
+  const ruta = `videofree/img-${Date.now()}.png`;
+  const opciones = { provider: "gemini", aspect_ratio: "16:9", puter_output_path: ruta };
+  if (blobs.length) opciones.input_images = blobs;
+  const img = await puter.ai.txt2img(prompt, opciones);
+  if (img.src.startsWith("data:")) return img.src;
+  let blob;
+  try { blob = await (await fetch(img.src)).blob(); }
+  catch { blob = await puter.fs.read(ruta); }            // la URL del proveedor puede no dejar leerla
+  puter.fs.delete(ruta).catch(() => {});
+  return await leerArchivo(blob);
+}
+// Lo que el servidor le pide a esta pestaña (guion o imagen) y la voz escena a escena.
+let atendiendo = null;
+async function trabajarConPuter(d) {
+  if (!d || !d.ocupado || d.simular) return;
+  if (d.voz_navegador) narrarEnNavegador(d.id);
+  const pedido = d.pedido_navegador;
+  if (!pedido || atendiendo === pedido.id) return;
+  if (!(await puterConectado())) return;               // falta el clic en «Conectar Puter»
+  atendiendo = pedido.id;
+  let resultado = null, error = "";
+  try {
+    resultado = pedido.tipo === "texto" ? await textoPuter(pedido.prompt, await blobsDe(d.id, pedido.imagenes))
+      : await imagenPuter(pedido.prompt, await blobsDe(d.id, pedido.referencias));
+    errorPuter = "";
+  } catch (err) { error = errorDe(err) || "error"; errorPuter = error; }
+  try { await api(`/api/proyectos/${d.id}/navegador`, { method: "POST", body: JSON.stringify({ id: pedido.id, resultado, error }) }); } catch { }
+  atendiendo = null;
 }
 const FRASE_MUESTRA = "Hola, así va a sonar la narración de tu video. ¿Te gusta cómo suena?";
 const muestrasPuter = {};
@@ -451,13 +551,17 @@ async function cargarLista() {
 
 $("#crear").onclick = async () => {
   try {
+    const texto = $("#nTexto").value.trim();
+    const titulo = $("#nTitulo").value.trim() || texto.split(/[.\n]/)[0].slice(0, 70);
     const p = await api("/api/proyectos", { method: "POST", body: JSON.stringify({
-      titulo: $("#nTitulo").value, texto: $("#nTexto").value, minutos: +$("#nMinutos").value || 1,
+      titulo, texto: $("#nTexto").value, minutos: +$("#nMinutos").value || 1,
       estilo: $("#nEstilo").value, tono: $("#nTono").value, simular: $("#nSimular").checked,
       voz: $("#nVozCaja select")?.value || "", referencia: refNueva, auto: $("#nAuto").checked,
       fotos: fotosNuevas, fotos_modo: document.querySelector('input[name="nFotosModo"]:checked')?.value || "referencia" }) });
     refNueva = ""; $("#nRefVista").hidden = true; $("#nRefQuitar").hidden = true;
     fotosNuevas = []; pintarFotosNuevas();
+    $("#nTitulo").value = ""; $("#nTexto").value = "";
+    $("#mago").hidden = true;
     location.hash = p.id;
   } catch (e) { alert(e.message); }
 };
@@ -502,7 +606,7 @@ function enlazarInicio() {
   const b = $("#empezar");
   if (b) b.onclick = () => {
     if (!sesion.usuario) return mostrarAcceso();
-    $("#nTitulo").focus(); $("#nTitulo").scrollIntoView({ behavior: "smooth", block: "center" });
+    abrirMago();
   };
 }
 enlazarInicio();
@@ -545,7 +649,7 @@ async function pintarTablero() {
     ${!ver.length && filtro !== "todos" ? `<p class="estado">No hay vídeos aquí todavía.</p>` : ""}`;
   document.querySelectorAll("[data-filtro]").forEach(b => b.onclick = () => { filtro = b.dataset.filtro; pintarTablero(); });
   [$("#tNuevo"), $("#tNuevo2")].forEach(b => b && (b.onclick = () => {
-    $("#nTitulo").focus(); $("#nTitulo").scrollIntoView({ behavior: "smooth", block: "center" });
+    abrirMago();
   }));
   document.querySelectorAll("[data-publicar]").forEach(b => b.onclick = () => {
     const caja = document.querySelector(`#pub-${b.dataset.publicar}`);
@@ -598,6 +702,7 @@ async function refrescar() {
   const viendo = document.querySelector(".escena video:hover");
   const eligiendoVoz = (foco && foco.closest && foco.closest("#pVoz")) || (sonando && sonando.boton.closest && sonando.boton.closest("#pVoz"));
   if (!editando && !viendo && !eligiendoVoz) pintar();
+  trabajarConPuter(datos);
   temporizador = setTimeout(refrescar, datos.ocupado ? 2000 : 8000);
 }
 
@@ -610,7 +715,7 @@ function pintar() {
   const dur = d.escenas.reduce((s, e) => s + (e.duracion || 0), 0);
   const faltanImg = d.escenas.filter(e => !e.imagen).length;
   const plan = est.motor === "pollinations" ? `${est.imagenes} imágenes por generar con Pollinations (~${est.minutos_imagenes} min)`
-    : est.motor === "gemini" || est.motor === "openai" ? `${est.imagenes} imágenes por generar con ${est.motor === "openai" ? "OpenAI" : "Gemini"} (~${est.minutos_imagenes} min)`
+    : ["gemini", "openai", "puter"].includes(est.motor) ? `${est.imagenes} imágenes por generar con ${{ openai: "OpenAI", gemini: "Gemini", puter: "Puter (gratis)" }[est.motor]} (~${est.minutos_imagenes} min)`
     : est.motor === "manual" ? `${faltanImg} escenas esperan tu imagen`
     : est.motor === "fotos" ? `${est.imagenes} escenas con tus fotos` : "imágenes de prueba";
 
@@ -621,9 +726,9 @@ function pintar() {
     </div>
     <p class="estado">${d.escenas.length} escenas · ${(dur / 60).toFixed(1)} min de voz · ${plan} · coste 0 $</p>
     <div class="fila" style="max-width:520px"><span class="estado">Voz del vídeo</span><div id="pVoz" style="flex:1"></div></div>
-    ${voces.find(v => v.id === (d.voz || config.voz))?.puter ? `<p class="ayuda">${esc(nombreVoz(d.voz || config.voz))} la narra <b>tu navegador</b> con tu cuenta gratis de Puter (sin clave de Gemini):
-      deja esta pestaña abierta mientras se hace la voz. <button id="puterConectar">Conectar Puter</button>
-      <span class="estado" id="puterEstado">${d.voz_navegador && d.ocupado ? (errorPuter ? "✗ Puter: " + esc(errorPuter) : narrando ? "🎙 narrando escena por escena…" : "⚠ Pulsa «Conectar Puter» para que empiece la voz.") : ""}</span></p>` : ""}
+    ${usaPuter(d) ? `<p class="ayuda">${esc(quePuter(d))} lo hace <b>tu navegador</b> gratis con tu cuenta de Puter:
+      deja esta pestaña abierta mientras trabaja. <button id="puterConectar">Conectar Puter</button>
+      <span class="estado" id="puterEstado">${d.ocupado && (d.voz_navegador || d.pedido_navegador) ? (errorPuter ? "✗ Puter: " + esc(errorPuter) : (narrando || atendiendo) ? "✨ trabajando con Puter…" : "⚠ Pulsa «Conectar Puter» para que siga.") : ""}</span></p>` : ""}
     <div class="ref-proyecto"><span class="estado">Imagen de ejemplo del estilo</span>
       ${d.referencia ? `<a href="${archivo(d.referencia)}" target="_blank"><img src="${archivo(d.referencia)}" alt="Imagen de ejemplo"></a>` : `<span class="estado">— ninguna</span>`}
       <button id="refSubir" ${ocupado ? "disabled" : ""}>${d.referencia ? "Cambiar" : "Subir"}</button>
@@ -710,9 +815,8 @@ function pintar() {
   };
   if ($("#puterConectar")) $("#puterConectar").onclick = async () => {
     try { await conectarPuter(); $("#puterEstado").textContent = "✓ Puter conectado."; } catch (e) { $("#puterEstado").textContent = "✗ " + (e?.message || e); }
-    if (d.voz_navegador && d.ocupado) narrarEnNavegador(d.id);
+    trabajarConPuter(d);
   };
-  if (d.voz_navegador && d.ocupado) narrarEnNavegador(d.id);
   if ($("#copiarGuion")) {
     $("#copiarGuion").onclick = async ev => {
       const { prompt } = await api(`/api/proyectos/${actual}/guion_prompt`);
@@ -991,8 +1095,62 @@ function usarTema(v, n) {
   if (n && n.tono !== undefined) $("#nTono").value = n.tono;
   if (v.minutos) $("#nMinutos").value = Math.min(15, Math.max(1, Math.round(v.minutos)));
   location.hash = "";
-  setTimeout(() => { $("#nTitulo").scrollIntoView({ behavior: "smooth", block: "center" }); $("#nTitulo").focus(); }, 50);
+  abrirMago(MAGO.indexOf("tema"));
 }
+
+// ------------------------------------------------------------- crear vídeo (asistente)
+const MAGO = ["modo", "tema", "estilo", "voz", "listo"];
+let pasoMago = 0;
+const NOMBRE_MOTOR = { gemini: "Gemini (tu clave)", openai: "OpenAI (tu clave)", puter: "Gemini gratis con tu cuenta de Puter",
+  pollinations: "Pollinations (gratis)", manual: "Lo pegas tú (ChatGPT)", claude: "Claude (tu suscripción)", ollama: "Ollama (local)", prueba: "De prueba" };
+function abrirMago(inicio = 0) {
+  if (!sesion.usuario) return mostrarAcceso();
+  pasoMago = inicio; $("#mago").hidden = false; pintarMago();
+}
+function pintarMago() {
+  const nombre = MAGO[pasoMago];
+  document.querySelectorAll("[data-mago]").forEach(sec => sec.hidden = sec.dataset.mago !== nombre);
+  $("#magoPasoN").textContent = `Crear vídeo · paso ${pasoMago + 1} de ${MAGO.length}`;
+  $("#magoAtras").textContent = pasoMago === 0 ? "Cancelar" : "Atrás";
+  $("#magoSig").hidden = nombre === "listo"; $("#crear").hidden = nombre !== "listo";
+  if (nombre === "tema") setTimeout(() => $("#nTexto").focus(), 30);
+  if (nombre === "listo") pintarResumen();
+}
+async function pintarResumen() {
+  const auto = $("#nAuto").checked, prueba = $("#nSimular").checked;
+  const vozId = $("#nVozCaja select")?.value || config.voz, ficha = voces.find(v => v.id === vozId) || {};
+  const guionM = prueba ? "prueba" : config.guion_efectivo, imgM = prueba ? "prueba" : (document.querySelector('input[name="nFotosModo"]:checked')?.value === "escenas" && fotosNuevas.length ? "fotos" : config.imagen_efectivo);
+  const puter = !prueba && (guionM === "puter" || imgM === "puter" || ficha.puter);
+  const titulo = $("#nTitulo").value.trim() || $("#nTexto").value.trim().split(/[.\n]/)[0].slice(0, 70);
+  $("#magoResumen").innerHTML = `<dl class="resumen">
+      <dt>Vídeo</dt><dd><b>${esc(titulo)}</b> · ${esc($("#nMinutos").value)} min · ${esc($("#nTono").selectedOptions[0].textContent)}</dd>
+      <dt>Modo</dt><dd>${auto ? "⚡ Automático: al pulsar Crear sale el vídeo entero" : "✋ Manual: tú lanzas cada paso"}${prueba ? " · modo prueba" : ""}</dd>
+      <dt>Guion</dt><dd>${NOMBRE_MOTOR[guionM] || guionM}</dd>
+      <dt>Imágenes</dt><dd>${imgM === "fotos" ? `Tus ${fotosNuevas.length} fotos, tal cual` : NOMBRE_MOTOR[imgM] || imgM}${refNueva ? " · con tu imagen de ejemplo" : ""}${fotosNuevas.length && imgM !== "fotos" ? ` · con tus ${fotosNuevas.length} fotos de referencia` : ""}</dd>
+      <dt>Voz</dt><dd>${esc(ficha.nombre || vozId)}${ficha.puter ? " · gratis con tu cuenta de Puter" : ficha.gemini ? " · Gemini (tu clave)" : " · gratis"}</dd></dl>
+    ${puter ? `<div class="puter-caja">✨ Usa tus <b>créditos gratis de Puter</b>: lo hace tu navegador, sin claves. Conéctalo ahora (una sola vez) y deja la pestaña abierta mientras se hace el vídeo.
+      <div class="fila" style="margin-top:8px"><button id="magoPuter">Conectar Puter</button><span class="estado" id="magoPuterEstado"></span></div></div>` : ""}
+    ${guionM === "manual" && !prueba ? `<p class="ayuda">El guion es a mano: en la página del vídeo te damos el prompt para pegarlo en ChatGPT.</p>` : ""}`;
+  if ($("#magoPuter")) {
+    if (await puterConectado()) $("#magoPuterEstado").textContent = "✓ Conectado";
+    $("#magoPuter").onclick = async () => {
+      try { await conectarPuter(); $("#magoPuterEstado").textContent = "✓ Conectado"; }
+      catch (e) { $("#magoPuterEstado").textContent = "✗ " + errorDe(e); }
+    };
+  }
+}
+$("#abrirMago").onclick = () => abrirMago();
+$("#magoAtras").onclick = () => { if (pasoMago === 0) { $("#mago").hidden = true; if (sonando) sonando.parar(); } else { pasoMago--; pintarMago(); } };
+$("#magoSig").onclick = () => {
+  if (MAGO[pasoMago] === "tema" && !$("#nTexto").value.trim()) {
+    $("#magoAvisoTema").textContent = "Escribe de qué trata el vídeo (o busca una idea en los nichos).";
+    return $("#nTexto").focus();
+  }
+  $("#magoAvisoTema").textContent = "";
+  pasoMago++; pintarMago();
+};
+document.querySelectorAll('input[name="magoModo"]').forEach(r => r.onchange = () => { $("#nAuto").checked = r.value === "auto"; });
+$("#magoIdeas").onclick = () => { $("#mago").hidden = true; location.hash = "nichos"; };
 
 function abrirAsistente(inicio = 0) { paso = inicio; diag = null; $("#velo").hidden = false; pintarAsistente(); }
 function cerrarAsistente() {
@@ -1034,7 +1192,7 @@ async function pintarAsistente() {
       <label>Clave de ${oa ? "OpenAI" : "Gemini"}</label><input id="gClave" type="password" autocomplete="off" placeholder="${tiene ? "ya guardada ✓ (pega otra para cambiarla)" : "pega tu clave"}">
       <div class="fila" style="margin-top:10px"><button class="primario" id="gProbar">Probar y guardar</button>
         ${tiene ? `<button id="gOlvidar">Borrar la clave</button>` : ""}</div>
-      <p class="estado" id="gEstado">${tiene ? "✓ Clave guardada." : "Sin clave también funciona: voz Jorge, imágenes de Pollinations y guion pegado de ChatGPT."}</p>`;
+      <p class="estado" id="gEstado">${tiene ? "✓ Clave guardada." : "Sin clave también funciona: guion, imágenes y voces de Gemini gratis con tu cuenta de Puter (se conecta al crear el vídeo)."}</p>`;
   } else if (nombre === "voz") {
     html += `<h2>Elige la voz</h2>
       <p>Pulsa ▶ para escucharla. Luego la puedes cambiar en cada vídeo.</p>
