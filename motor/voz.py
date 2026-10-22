@@ -4,7 +4,8 @@ Paso 2: la voz de cada escena.
 El catalogo, en este orden:
   - Puck (la de serie), Charon y Kore: Gemini TTS, con la clave de Gemini de la
     persona. El tono del video se da con un prefijo corto en el propio texto
-    (motor/gemini.py). SIN clave de Gemini las narra el NAVEGADOR con Puter.js
+    (motor/gemini.py). SIN clave de Gemini se narra con Jorge. Solo si en
+    config.json se pone "voz": {"puter": true}, las narra el NAVEGADOR con Puter.js
     (puter.com: cada persona entra con su cuenta gratis de Puter y el gasto va a
     esa cuenta). Este paso no puede llamar a Puter: marca el video con
     'voz_navegador', espera, y la pestaña abierta narra cada escena y la sube
@@ -45,12 +46,13 @@ FRASE_MUESTRA = "Hola, así va a sonar la narración de tu video. ¿Te gusta có
 def catalogo():
     """Primero las 3 de Gemini (Puck es la de serie), luego las gratis y Jorge al final.
 
-    Las de Gemini siempre se pueden elegir: con clave las narra el servidor, sin
-    clave el navegador con Puter ('puter': True).
+    Las de Gemini necesitan la clave de Gemini (gratis); sin ella el video sale con
+    Jorge. Con "voz": {"puter": true} en config.json las narra el navegador con Puter.
     """
     con_clave = gemini.hay_clave()
+    puter = not con_clave and bool(proyecto.config()["voz"].get("puter"))
     voces = [{"id": vid, "nombre": v["nombre"], "pais": "Gemini", "genero": v["genero"],
-              "detalle": v["detalle"], "gemini": True, "lista": True, "puter": not con_clave}
+              "detalle": v["detalle"], "gemini": True, "lista": con_clave or puter, "puter": puter}
              for vid, v in gemini.VOCES.items()]
     voces += [{"id": vid, "nombre": nombre, "pais": pais, "genero": genero,
                "detalle": "gratis, sin clave", "gemini": False, "lista": True}
@@ -177,8 +179,13 @@ def ejecutar(datos, avisar, solo=None):
     carpeta = proyecto.carpeta(datos["id"]) / "voz"
     carpeta.mkdir(exist_ok=True)
     if gemini.es_suya(elegida) and not datos.get("simular") and not gemini.hay_clave():
-        _esperar_navegador(datos, elegida, avisar, solo)
-        return
+        if cfg.get("puter"):
+            _esperar_navegador(datos, elegida, avisar, solo)
+            return
+        # Puter ya no va por defecto: su saldo gratis no da para un video largo.
+        avisar(f"Sin clave de Gemini no hay {elegida.split(':')[1]}: narro con Jorge (gratis). "
+               f"Pega tu clave de Gemini (gratis) en el Asistente para usar Puck, Charon o Kore.")
+        elegida = JORGE
     for e in datos["escenas"]:
         if solo and e["n"] not in solo:
             continue

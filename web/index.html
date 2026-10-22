@@ -380,7 +380,7 @@ const guardarCfg = cambio => api("/api/config", { method: "POST", body: JSON.str
 // Las voces en español van agrupadas por país, y todas se pueden escuchar antes.
 const nombreVoz = id => { const v = voces.find(x => x.id === id); return v ? `${v.nombre} · ${v.pais}${v.genero ? " · " + v.genero : ""}` : id; };
 function opcionesVoz(elegida) {
-  return voces.map(v => `<option value="${v.id}" ${v.id === elegida ? "selected" : ""}>${esc(v.nombre)} · ${esc(v.gemini ? "Gemini, " + v.genero + " " + v.detalle : v.pais + ", gratis")}${v.puter ? " (gratis con cuenta Puter)" : ""}</option>`).join("")
+  return voces.map(v => `<option value="${v.id}" ${v.id === elegida ? "selected" : ""}>${esc(v.nombre)} · ${esc(v.gemini ? "Gemini, " + v.genero + " " + v.detalle : v.pais + ", gratis")}${v.puter ? " (gratis con cuenta Puter)" : v.gemini && !v.lista ? " (con clave de Gemini; si no, Jorge)" : ""}</option>`).join("")
     + (elegida && !voces.some(v => v.id === elegida) ? `<option value="${esc(elegida)}" selected>${esc(elegida)}</option>` : "");
 }
 // ------------------------------------------------------------- Puter
@@ -523,6 +523,7 @@ async function oir(id, boton) {
     sonando.parar();
     if (mismo) return;
   }
+  if (ficha.gemini && !ficha.lista) return alert("Puck, Charon y Kore necesitan tu clave de Gemini (es gratis: Asistente → paso 2). Sin ella, el vídeo se narra con Jorge.");
   let src = `/api/voces/${encodeURIComponent(id)}/muestra?t=${Date.now()}`;
   if (ficha.puter) {
     boton.textContent = "⏳";
@@ -1195,14 +1196,14 @@ async function pintarResumen() {
   const auto = $("#nAuto").checked, prueba = $("#nSimular").checked;
   const vozId = $("#nVozCaja select")?.value || config.voz, ficha = voces.find(v => v.id === vozId) || {};
   const guionM = prueba ? "prueba" : config.guion_efectivo, imgM = prueba ? "prueba" : (document.querySelector('input[name="nFotosModo"]:checked')?.value === "escenas" && fotosNuevas.length ? "fotos" : config.imagen_efectivo);
-  const puter = !prueba && (guionM === "puter" || imgM === "puter" || ficha.puter);
+  const puter = !prueba && (guionM === "puter" || imgM === "puter");    // solo si se eligió Puter a mano
   const titulo = $("#nTitulo").value.trim() || $("#nTexto").value.trim().split(/[.\n]/)[0].slice(0, 70);
   $("#magoResumen").innerHTML = `<dl class="resumen">
       <dt>Vídeo</dt><dd><b>${esc(titulo)}</b> · ${esc($("#nMinutos").value)} min · ${esc($("#nTono").selectedOptions[0].textContent)}</dd>
       <dt>Modo</dt><dd>${auto ? "⚡ Automático: al pulsar Crear sale el vídeo entero" : "✋ Manual: tú lanzas cada paso"}${prueba ? " · modo prueba" : ""}</dd>
       <dt>Guion</dt><dd>${NOMBRE_MOTOR[guionM] || guionM}</dd>
       <dt>Imágenes</dt><dd>${imgM === "fotos" ? `Tus ${fotosNuevas.length} fotos, tal cual` : NOMBRE_MOTOR[imgM] || imgM}${refNueva ? " · con tu imagen de ejemplo" : ""}${fotosNuevas.length && imgM !== "fotos" ? ` · con tus ${fotosNuevas.length} fotos de referencia` : ""}</dd>
-      <dt>Voz</dt><dd>${esc(ficha.nombre || vozId)}${ficha.puter ? " · gratis con tu cuenta de Puter" : ficha.gemini ? " · Gemini (tu clave)" : " · gratis"}</dd></dl>
+      <dt>Voz</dt><dd>${esc(ficha.nombre || vozId)}${ficha.puter ? " · gratis con tu cuenta de Puter" : ficha.gemini ? (config.gemini ? " · Gemini (tu clave)" : " · sin clave de Gemini sale con <b>Jorge</b>") : " · gratis"}</dd></dl>
     ${puter ? `<div class="puter-caja">✨ Usa tus <b>créditos gratis de Puter</b>: lo hace tu navegador, sin claves. Conéctalo ahora (una sola vez) y deja la pestaña abierta mientras se hace el vídeo.
       <div class="fila" style="margin-top:8px"><button id="magoPuter">Conectar Puter</button><span class="estado" id="magoPuterEstado"></span></div></div>` : ""}
     ${imgM === "pollinations" ? `<div class="puter-caja">⚠ Sin cuenta, las imágenes salen de Pollinations: <b>calidad baja, con marca de agua y sin copiar tu imagen de ejemplo</b>.
@@ -1288,7 +1289,7 @@ async function pintarAsistente() {
     html += `<h2>Elige la voz</h2>
       <p>Pulsa ▶ para escucharla. Luego la puedes cambiar en cada vídeo.</p>
       ${voces.map(v => `<label class="opcion ${v.gemini && !v.lista ? "off" : ""}"><input type="radio" name="vozA" value="${v.id}" ${v.id === config.voz ? "checked" : ""} ${v.gemini && !v.lista ? "disabled" : ""}>
-          <span><b>${esc(v.nombre)}</b><small>${v.gemini ? `Gemini · ${esc(v.genero)} ${esc(v.detalle)}${v.puter ? " · gratis con tu cuenta de Puter" : ""}` : `${esc(v.pais)} · ${esc(v.genero)} · gratis, sin clave`}</small></span>
+          <span><b>${esc(v.nombre)}</b><small>${v.gemini ? `Gemini · ${esc(v.genero)} ${esc(v.detalle)}${v.puter ? " · gratis con tu cuenta de Puter" : v.lista ? "" : " · necesita tu clave de Gemini"}` : `${esc(v.pais)} · ${esc(v.genero)} · gratis, sin clave`}</small></span>
           <button type="button" class="oir" data-oir="${v.id}" ${v.gemini && !v.lista ? "disabled" : ""}>▶ Escuchar</button></label>`).join("")}`;
   } else {
     html += `<h2>¡Listo!</h2>
