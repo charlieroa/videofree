@@ -8,7 +8,7 @@
     "segundos_por_escena": 7
   },
   "voz": {
-    "voz": "es-MX-JorgeNeural",
+    "voz": "gemini:Puck",
     "velocidad": "+0%"
   },
   "imagen": {

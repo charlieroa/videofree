@@ -195,7 +195,8 @@ class Credenciales(BaseModel):
 
 @app.get("/")
 def inicio():
-    return FileResponse(WEB / "index.html")
+    # Sin cache: tras actualizar la app, recargar basta para ver la pantalla nueva.
+    return FileResponse(WEB / "index.html", headers={"Cache-Control": "no-cache"})
 
 
 def _es_local(peticion):

@@ -1,10 +1,11 @@
 """
 Paso 2: la voz de cada escena.
 
-El catalogo son 4 voces:
-  - Jorge (Mexico): es-MX-JorgeNeural de edge-tts (Microsoft). Gratis y sin clave.
-  - Puck, Charon y Kore: Gemini TTS, con la clave de Gemini de la persona. El
-    tono del video se da con un prefijo corto en el propio texto (motor/gemini.py).
+El catalogo son 4 voces, en este orden:
+  - Puck (la de serie), Charon y Kore: Gemini TTS, con la clave de Gemini de la
+    persona. El tono del video se da con un prefijo corto en el propio texto
+    (motor/gemini.py). Sin clave de Gemini se narra con Jorge y el registro lo dice.
+  - Jorge (Mexico), al final: es-MX-JorgeNeural de edge-tts (Microsoft). Gratis y sin clave.
 
 Los proyectos viejos con otra voz de edge-tts siguen funcionando. Se sintetiza escena a escena porque la duracion de cada
 audio es la que manda: la animacion de cada imagen dura lo que dura su frase.
@@ -24,13 +25,13 @@ FORMATO = re.compile(r"^[a-z]{2}-[A-Z]{2}-[A-Za-z]+Neural$")
 JORGE = "es-MX-JorgeNeural"
 FRASE_MUESTRA = "Hola, así va a sonar la narración de tu video. ¿Te gusta cómo suena?"
 def catalogo():
-    """Las 4 voces: Jorge (gratis, sin clave) y las 3 de Gemini."""
+    """Las 4 voces: primero las 3 de Gemini (Puck es la de serie) y Jorge al final."""
     con_clave = gemini.hay_clave()
-    voces = [{"id": JORGE, "nombre": "Jorge", "pais": "México", "genero": "hombre",
-              "detalle": "gratis, sin clave", "gemini": False, "lista": True}]
-    for vid, v in gemini.VOCES.items():
-        voces.append({"id": vid, "nombre": v["nombre"], "pais": "Gemini", "genero": v["genero"],
-                      "detalle": v["detalle"], "gemini": True, "lista": con_clave})
+    voces = [{"id": vid, "nombre": v["nombre"], "pais": "Gemini", "genero": v["genero"],
+              "detalle": v["detalle"], "gemini": True, "lista": con_clave}
+             for vid, v in gemini.VOCES.items()]
+    voces.append({"id": JORGE, "nombre": "Jorge", "pais": "México", "genero": "hombre",
+                  "detalle": "gratis, sin clave", "gemini": False, "lista": True})
     return voces
 
 
@@ -72,8 +73,10 @@ def ejecutar(datos, avisar, solo=None):
     carpeta = proyecto.carpeta(datos["id"]) / "voz"
     carpeta.mkdir(exist_ok=True)
     if gemini.es_suya(elegida) and not datos.get("simular") and not gemini.hay_clave():
-        raise RuntimeError("La voz elegida es de Gemini y no hay clave: pégala en el Asistente "
-                           "o cambia a la voz Jorge (gratis, sin clave).")
+        # Puck es la de serie: sin clave de Gemini el video no se queda parado, sale con Jorge.
+        avisar(f"Sin clave de Gemini no se puede usar {elegida.split(':')[1]}: narro con Jorge "
+               f"(gratis). Pega tu clave de Gemini en el Asistente para usar Puck, Charon o Kore.")
+        elegida = JORGE
     for e in datos["escenas"]:
         if solo and e["n"] not in solo:
             continue

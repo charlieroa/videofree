@@ -241,7 +241,7 @@
   <aside>
     <div class="panel panel-voz" style="margin-bottom:16px">
       <h2>🎙 Voz</h2>
-      <p class="estado" style="margin:0 0 8px">Elige y escucha la voz de tus vídeos nuevos. Jorge es gratis y sin clave; Puck, Charon y Kore son de Gemini (con tu clave).</p>
+      <p class="estado" style="margin:0 0 8px">Elige y escucha la voz de tus vídeos nuevos. Puck, Charon y Kore son de Gemini (gratis, con tu clave de Gemini); sin esa clave se narra con Jorge.</p>
       <div id="nVozCaja"></div>
     </div>
     <div class="panel">
@@ -564,7 +564,7 @@ function pintar() {
     </div>
     <p class="estado">${d.escenas.length} escenas · ${(dur / 60).toFixed(1)} min de voz · ${plan} · coste 0 $</p>
     <div class="fila" style="max-width:520px"><span class="estado">Voz del vídeo</span><div id="pVoz" style="flex:1"></div></div>
-    ${voces.find(v => v.id === (d.voz || config.voz))?.gemini && !config.gemini ? `<p class="ayuda">Esta voz es de Gemini: pega tu clave en el Asistente o cambia a Jorge (gratis).</p>` : ""}
+    ${voces.find(v => v.id === (d.voz || config.voz))?.gemini && !config.gemini ? `<p class="ayuda">Esta voz es de Gemini: sin tu clave de Gemini (gratis, en el Asistente) el vídeo se narra con Jorge.</p>` : ""}
     <div class="ref-proyecto"><span class="estado">Imagen de ejemplo del estilo</span>
       ${d.referencia ? `<a href="${archivo(d.referencia)}" target="_blank"><img src="${archivo(d.referencia)}" alt="Imagen de ejemplo"></a>` : `<span class="estado">— ninguna</span>`}
       <button id="refSubir" ${ocupado ? "disabled" : ""}>${d.referencia ? "Cambiar" : "Subir"}</button>
@@ -959,7 +959,7 @@ async function pintarAsistente() {
         <li>Pulsa <b>Create new secret key</b> y cópiala (empieza por <code>sk-</code>).</li>
         <li>Pégala aquí y pulsa <b>Probar y guardar</b>.</li>
       </ol>
-      <p class="ayuda">Las imágenes (gpt-image) se cobran de tu saldo de OpenAI: necesitas crédito cargado y, a veces, verificar tu organización. La voz sigue siendo Jorge (gratis).</p>`
+      <p class="ayuda">Las imágenes (gpt-image) se cobran de tu saldo de OpenAI: necesitas crédito cargado y, a veces, verificar tu organización. Para la voz Puck guarda también la clave gratis de Gemini; si no, se narra con Jorge.</p>`
       : `<ol>
         <li>Entra en <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> con tu cuenta de Google.</li>
         <li>Pulsa <b>Create API key</b> (Crear clave) y cópiala.</li>
