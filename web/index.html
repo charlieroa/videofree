@@ -364,6 +364,7 @@
 <script>
 const $ = s => document.querySelector(s);
 let actual = null, datos = null, temporizador = null, activa = null, config = null, voces = [];
+let pintado = "";            // lo último que se pintó: si no cambia nada, no se repinta (el vídeo se recargaba)
 
 async function api(ruta, opciones = {}) {
   const r = await fetch(ruta, { headers: { "Content-Type": "application/json" }, ...opciones });
@@ -632,6 +633,7 @@ $("#nFotos").onchange = async ev => {
 
 window.onhashchange = () => abrir(location.hash.slice(1));
 async function abrir(pid) {
+  pintado = "";                                         // otra pantalla: hay que pintar sí o sí
   if (pid === "nichos") { actual = null; clearTimeout(temporizador); clearTimeout(relojTablero); await pintarNichos(); if (sesion.usuario) cargarLista(); return; }
   if (pid === "canal") { actual = null; clearTimeout(temporizador); clearTimeout(relojTablero); await pintarCanal(); if (sesion.usuario) cargarLista(); return; }
   actual = pid; activa = null;
@@ -742,7 +744,9 @@ async function refrescar() {
   const editando = foco && foco.dataset && foco.dataset.campo;
   const viendo = document.querySelector(".escena video:hover");
   const eligiendoVoz = (foco && foco.closest && foco.closest("#pVoz")) || (sonando && sonando.boton.closest && sonando.boton.closest("#pVoz"));
-  if (!editando && !viendo && !eligiendoVoz) pintar();
+  const reproduciendo = [...document.querySelectorAll("#vista video")].some(v => !v.paused && !v.ended);
+  const firma = actual + JSON.stringify(datos) + JSON.stringify(config);
+  if (firma !== pintado && !editando && !viendo && !eligiendoVoz && !reproduciendo) { pintar(); pintado = firma; }
   trabajarConPuter(datos);
   temporizador = setTimeout(refrescar, datos.ocupado ? 2000 : 8000);
 }
@@ -799,7 +803,7 @@ function pintar() {
       <textarea id="guionPegado" rows="5" placeholder="Pega aquí la respuesta de ChatGPT (el JSON)" style="margin-top:6px"></textarea>
       <button class="primario" id="usarGuion" style="margin-top:6px">Usar este guion</button></div>` : ""}
     ${ocupado ? progreso(d) : ""}
-    ${d.mp4 ? `<div class="final"><h2>Vídeo final</h2><video controls src="${archivo(d.mp4)}"></video>
+    ${d.mp4 ? `<div class="final"><h2>Vídeo final</h2><video controls preload="auto" src="${archivo(d.mp4)}"></video>
       <p><a href="${archivo(d.mp4)}" download>Descargar MP4</a></p></div>` : ""}
     ${d.biblia ? `<details><summary>Estilo y personajes (se repiten en cada imagen)</summary>
       <p class="estado">${esc(d.biblia.estilo_visual)}</p>

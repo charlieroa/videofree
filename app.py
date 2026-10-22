@@ -435,7 +435,9 @@ def ver(pid: str):
     datos["pedido_navegador"] = navegador.pendiente(pid) if datos["ocupado"] else None
     datos["estimacion"] = imagenes.estimar(datos)
     datos["prompts"] = {e["n"]: imagenes.prompt_de(datos, e) for e in datos["escenas"]}
-    datos["sello"] = time.time()
+    # Cambia solo cuando cambia el proyecto: va en las URL de imagenes y video (?t=) para
+    # que el navegador las recargue al rehacerlas, y NO cada vez que la pantalla pregunta.
+    datos["sello"] = (proyecto.carpeta(pid) / "proyecto.json").stat().st_mtime
     return datos
 
 
