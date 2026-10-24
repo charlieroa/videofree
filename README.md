@@ -6,9 +6,9 @@ Cloudflare** (unas 60 al día) y el guion y la voz de tu **clave gratis de Gemin
 también funciona, más sencillo.
 
 > **La forma fácil: que lo instale Claude.** Abre la app de Claude en tu PC, entra en la pestaña
-> **Code** (no en Chat) y pega el mensaje de [Instalarlo con Claude Code](#instalarlo-con-claude-code).
+> **Code** con una carpeta de tu PC (no en el chat ni en claude.ai/code) y pega el mensaje de [Instalarlo con Claude Code](#instalarlo-con-claude-code).
 > Claude descarga, instala, lo abre en tu navegador y te guía. Si te contesta que no puede
-> instalarlo, estás en **Chat** o en claude.ai: cambia a **Code**.
+> instalarlo, estás en la nube: vuelve a la app instalada.
 
 ```
 Tema + línea gráfica  →  1 Guion  →  2 Voz  →  3 Imágenes  →  4 Montaje  →  video_final.mp4
@@ -176,9 +176,10 @@ Documentos) y **pega este mensaje**:
 Clona https://github.com/charlieroa/videofree aquí (si no hay Git, baja el ZIP del repo), lee el archivo skill/videofree/SKILL.md que viene dentro y síguelo: instala VideoFree, déjalo abierto en el navegador y guíame en el asistente.
 ```
 
-Pulsa **Permitir** cada vez que te lo pida. **Tiene que ser Code**: el Chat (en la app o en
-claude.ai) no puede tocar tu computador; si le pegas el mensaje ahí te dirá que no puede
-instalarlo y te dará una guía genérica.
+Pulsa **Permitir** cada vez que te lo pida. **Tiene que ser la app instalada, en Code y con una
+carpeta de tu PC**: el chat y **claude.ai/code** en el navegador corren en un servidor de
+Anthropic, no en tu computador. Si te dice que no puede instalarlo, que no tiene internet o que
+corre en un «contenedor», estás en uno de esos.
 
 Claude comprueba Python, descarga el repo, instala lo necesario, arranca la app y te acompaña
 en el asistente. **Tus claves (Gemini, Cloudflare) las pegas tú en VideoFree**: Claude no te la pide y no
@@ -217,7 +218,7 @@ copy videofree\skill\videofree\SKILL.md %USERPROFILE%\.claude\skills\videofree\
 | «Se acabó la cuota gratis de Gemini» | Espera un rato (el cupo por minuto se libera solo; el diario, al día siguiente) o usa Jorge |
 | No sale «Entrar con Cloudflare» | Falta Node.js: instálalo y vuelve a abrir VideoFree, o conéctalo «a mano» |
 | Imágenes simples con marca de agua | Cloudflare sin conectar o cupo del día gastado (se ve arriba) |
-| Claude dice que no puede instalarlo | Estás en Chat o en claude.ai: abre la app y pásate a **Code** |
+| Claude dice que no puede instalarlo o que corre en un «contenedor» | Estás en el chat o en claude.ai/code (nube): abre la app instalada, **Code**, carpeta de tu PC |
 | El puerto 8031 está ocupado | `.venv\Scripts\python app.py --puerto 8032` y abre ese puerto |
 
 Los detalles técnicos (modelos, parámetros y cómo está hecho cada paso) están en
