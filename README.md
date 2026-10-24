@@ -1,9 +1,14 @@
 # VideoFree
 
 De un tema a un vídeo narrado, con imágenes en tu estilo y movimiento de cámara, **sin pagar
-nada por vídeo**. Corre en tu computador, sin GPU. Con **una clave de Google Gemini u OpenAI**
-el guion y las imágenes salen solos (las imágenes de Gemini piden facturación activada en Google);
-sin clave también funciona.
+nada por vídeo**. Corre en tu computador, sin GPU. Las imágenes salen de tu **cuenta gratis de
+Cloudflare** (unas 60 al día) y el guion y la voz de tu **clave gratis de Gemini**; sin nada
+también funciona, más sencillo.
+
+> **La forma fácil: que lo instale Claude.** Abre la app de Claude en tu PC, entra en la pestaña
+> **Code** (no en Chat) y pega el mensaje de [Instalarlo con Claude Code](#instalarlo-con-claude-code).
+> Claude descarga, instala, lo abre en tu navegador y te guía. Si te contesta que no puede
+> instalarlo, estás en **Chat** o en claude.ai: cambia a **Code**.
 
 ```
 Tema + línea gráfica  →  1 Guion  →  2 Voz  →  3 Imágenes  →  4 Montaje  →  video_final.mp4
@@ -15,9 +20,9 @@ el resto del vídeo sigue automático.
 
 | Paso | Con tu clave de Gemini | Sin clave |
 |---|---|---|
-| Guion (escenas, estilo, personajes) | Gemini, automático | Copias un prompt en ChatGPT y pegas la respuesta |
+| Guion (escenas, estilo, personajes) | Gemini, automático | Pollinations, automático y sin cuenta |
 | Voz | **Puck** (hombre, animado), **Charon** (hombre, narrador), **Kore** (mujer) o **Jorge** | **Jorge** (México), gratis y sin clave |
-| Imágenes | Gemini u OpenAI, copiando el estilo de tu imagen de ejemplo y con los mismos personajes en todo el vídeo | Pollinations, gratis y sin cuenta |
+| Imágenes | **Cloudflare** (gratis, ~60 al día) u OpenAI (de pago), copiando el estilo de tu imagen de ejemplo y con los mismos personajes en todo el vídeo | Pollinations: sencillas y con marca de agua |
 | Montaje | **Efecto 3D de profundidad** en tu PC (Depth Anything V2 Small, sin GPU), subtítulos y música opcional | igual |
 
 Alternativas para el guion (en Ajustes): el CLI de Claude (con tu suscripción) u Ollama (local).
@@ -32,7 +37,9 @@ Alternativas para el guion (en Ajustes): el CLI de Claude (con tu suscripción) 
    Al instalarlo, marca **«Add python.exe to PATH»**.
 2. **Git**: desde [git-scm.com](https://git-scm.com/download/win). Si no quieres instalar Git,
    usa el botón verde **Code → Download ZIP** de esta página y descomprime el ZIP.
-3. **Una cuenta de Google** para sacar tu clave gratis de Gemini (opcional, pero recomendada).
+3. **Node.js** (recomendado): desde [nodejs.org](https://nodejs.org) (botón LTS). Con él conectas
+   Cloudflare con un solo botón.
+4. **Una cuenta de Google** para sacar tu clave gratis de Gemini (opcional, pero recomendada).
 
 ### 2. Descargar e instalar
 
@@ -53,9 +60,15 @@ No hace falta crear cuenta: la app entra directo con un usuario local de tu PC. 
 se abre el **asistente**:
 
 1. **Tu equipo**: comprueba solo que todo funcione.
-2. **Clave de Gemini**: entra en [aistudio.google.com/apikey](https://aistudio.google.com/apikey),
-   pulsa **Create API key**, cópiala, pégala en la app y pulsa **Probar y guardar**.
-   Si no quieres clave, pulsa **Seguir sin clave**.
+2. **Tu clave de IA** (puedes guardar varias):
+   - **Cloudflare** (imágenes): pulsa **Entrar con Cloudflare**, entra con Google (o crea la
+     cuenta gratis, sin tarjeta) y pulsa **Allow**. Sin Node.js, hazlo «a mano»: en
+     dash.cloudflare.com → AI → Workers AI → Use REST API copias el Account ID, creas el token
+     y pegas los dos.
+   - **Gemini** (guion y voz): entra en [aistudio.google.com/apikey](https://aistudio.google.com/apikey),
+     pulsa **Create API key**, cópiala, pégala en la app y pulsa **Probar y guardar**.
+
+   Si no quieres nada de esto, pulsa **Seguir sin clave**.
 3. **Voz**: escucha las 4 voces (▶) y elige una.
 4. **Listo.**
 
@@ -72,13 +85,12 @@ Pulsa **+ Crear vídeo**: un asistente de 5 pasos te lleva de la mano.
    elige uno con **Usar este tema**. La IA escribe el guion.
 3. **Tu línea gráfica**: estilo en palabras, imagen de ejemplo y tus fotos (todo opcional).
 4. **La voz**: escúchalas y elige.
-5. **Todo listo**: te dice qué IA hará cada cosa. Si es Puter, pulsa **Conectar Puter** y **Crear vídeo**.
+5. **Todo listo**: te dice qué IA hará cada cosa. Pulsa **Crear vídeo**.
 
 **Sin ninguna clave también funciona, gratis:** el guion lo escribe Pollinations (sin cuenta),
-las imágenes salen de Pollinations y la voz de una de las gratis. Para mejor calidad, gratis:
-**clave de Gemini** (guion y voces Puck, Charon y Kore) + **Cloudflare** (imágenes). Puter queda
-como opción en Ajustes: su saldo gratis es pequeño y, cuando se acaba, la app no lo vuelve a
-intentar (Puck sin saldo → el vídeo se narra entero con Jorge).
+las imágenes salen de Pollinations (sencillas y con marca de agua) y la voz de una de las gratis.
+Para mejor calidad, gratis: **Cloudflare** (imágenes) + **clave de Gemini** (guion y voces Puck,
+Charon y Kore).
 
 **Imágenes gratis de calidad cada día: Cloudflare.** En el Asistente (paso 2) elige
 **Cloudflare**: con una cuenta gratis (sin tarjeta) y un token de Workers AI salen unas 55-90
@@ -105,9 +117,6 @@ Los detalles de cada paso:
 
 ¿No sabes de qué hacer el vídeo? Mira **🔥 Nichos** (abajo) y pulsa **Usar este tema**: rellena
 el vídeo nuevo y la IA escribe un guion propio sobre ese tema.
-
-Sin clave, el guion se hace con ChatGPT: la app te da el prompt, lo pegas en ChatGPT y pegas su
-respuesta. Después pulsa **Hacer todo**.
 
 Si es tu primera vez, marca **Modo prueba**: arma el vídeo en segundos sin IA, para ver el montaje.
 
@@ -159,16 +168,20 @@ Necesitas Python 3.11 o más nuevo (`python3 --version`). Lo demás es igual.
 
 ## Instalarlo con Claude Code
 
-Si usas [Claude Code](https://claude.com/claude-code), abre Claude Code en la carpeta donde lo
-quieras y **pega este mensaje**:
+Necesitas la app de Claude en tu PC ([claude.ai/download](https://claude.ai/download)) con un plan
+de pago. Entra en la pestaña **Code**, elige la carpeta donde lo quieras (por ejemplo
+Documentos) y **pega este mensaje**:
 
 ```
-Instala VideoFree desde https://github.com/charlieroa/videofree siguiendo su skill
-en skill/videofree/SKILL.md, déjalo abierto en el navegador y guíame en el asistente.
+Clona https://github.com/charlieroa/videofree aquí (si no hay Git, baja el ZIP del repo), lee el archivo skill/videofree/SKILL.md que viene dentro y síguelo: instala VideoFree, déjalo abierto en el navegador y guíame en el asistente.
 ```
+
+Pulsa **Permitir** cada vez que te lo pida. **Tiene que ser Code**: el Chat (en la app o en
+claude.ai) no puede tocar tu computador; si le pegas el mensaje ahí te dirá que no puede
+instalarlo y te dará una guía genérica.
 
 Claude comprueba Python, descarga el repo, instala lo necesario, arranca la app y te acompaña
-en el asistente. **Tu clave de Gemini la pegas tú en VideoFree**: Claude no te la pide y no
+en el asistente. **Tus claves (Gemini, Cloudflare) las pegas tú en VideoFree**: Claude no te la pide y no
 debes pegarla en el chat.
 
 Para dejar el skill instalado y usarlo cuando quieras con `/videofree`:
@@ -185,12 +198,13 @@ copy videofree\skill\videofree\SKILL.md %USERPROFILE%\.claude\skills\videofree\
 
 ## Qué esperar, sin adornos
 
+- **Cupo de Cloudflare**: unas 55-90 imágenes al día (arriba en la app ves cuánto te queda).
+  Un vídeo de 15 minutos gasta casi todo el de un día; si se acaba a mitad, el resto sale de
+  Pollinations. Se renueva a las 00:00 UTC.
 - **Cuota gratis de Gemini**: el guion y la voz entran de sobra en el plan gratis para vídeos
-  cortos y medianos; si Google pide esperar, la app espera y reintenta sola. **Las imágenes de
-  Gemini no tienen cuota gratis** (Google las deja en 0 sin facturación): con una clave gratis
-  las imágenes salen de Pollinations y el registro lo avisa. Si activas la facturación en AI
-  Studio, salen de Gemini con tu estilo y tus personajes.
-- **Pollinations**: una imagen cada ~45 s. Un vídeo de 14 min (~85 imágenes) ≈ 1 hora, solo.
+  cortos y medianos; si Google pide esperar, la app espera y reintenta sola. Las imágenes de
+  Gemini no tienen cuota gratis (piden facturación): para eso está Cloudflare.
+- **Pollinations**: lento y con marca de agua. Es el respaldo, no el camino recomendado.
 - **Voces**: Jorge es clara pero algo robótica. Las de Gemini suenan más naturales y siguen el
   tono del vídeo (humor, documental, infantil…).
 
@@ -201,7 +215,9 @@ copy videofree\skill\videofree\SKILL.md %USERPROFILE%\.claude\skills\videofree\
 | `py` no se reconoce | Instala Python 3.12 marcando «Add to PATH» y abre otra terminal |
 | «Gemini no acepta esa clave» | Crea otra en aistudio.google.com/apikey y pégala en el asistente |
 | «Se acabó la cuota gratis de Gemini» | Espera un rato (el cupo por minuto se libera solo; el diario, al día siguiente) o usa Jorge |
-| «Tu clave no tiene cuota gratis para imágenes» | Normal en el plan gratis: siguen con Pollinations |
+| No sale «Entrar con Cloudflare» | Falta Node.js: instálalo y vuelve a abrir VideoFree, o conéctalo «a mano» |
+| Imágenes simples con marca de agua | Cloudflare sin conectar o cupo del día gastado (se ve arriba) |
+| Claude dice que no puede instalarlo | Estás en Chat o en claude.ai: abre la app y pásate a **Code** |
 | El puerto 8031 está ocupado | `.venv\Scripts\python app.py --puerto 8032` y abre ese puerto |
 
 Los detalles técnicos (modelos, parámetros y cómo está hecho cada paso) están en
